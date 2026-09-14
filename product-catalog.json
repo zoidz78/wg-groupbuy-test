@@ -1,0 +1,1573 @@
+{
+  "_readme": "Build-time reference only. NOT fetched by index.html. Consulted when building each new data-<date>.json to keep product keys/labels/units consistent across rounds (even across different suppliers) and avoid accidental key reuse or duplicate keys for the same product. Each entry now also carries lastPrice/lastRound so a new round's vendor price can be diffed against what we last charged — if it differs, flag the change to the user rather than silently updating. lastPrice/lastRound are omitted for keys with no recorded price in the available round files. Two fields added 2026-09-13 for the H5 frontend catalog project: category (Produce/Meats/Frozen/Pantry/Gifts, derived from Product_Catalog_Updated.xlsx) and active (boolean; currently true for every product — no product has been marked discontinued yet, this is scaffolding for future use).",
+  "products": {
+    "apple_envy": {
+      "label": "Envy苹果(5粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 10.5,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 5,
+      "active": true
+    },
+    "apple_nz_danshuo": {
+      "label": "新西兰丹烁苹果(5粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 9,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 5,
+      "active": true
+    },
+    "apple_yunnan_cherry": {
+      "label": "云南樱桃小苹果",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 12.8,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "asparagus": {
+      "label": "芦笋(500g/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 7.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 500,
+      "active": true
+    },
+    "banana_ph": {
+      "label": "菲律宾长香蕉(900g/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 2.9,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 900,
+      "active": true
+    },
+    "beansprout_green": {
+      "label": "绿豆芽",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 3.5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "beef_jinqian_jian": {
+      "label": "小条金钱腱",
+      "category": "Meats",
+      "unit": "kg",
+      "lastPrice": 18,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "active": true
+    },
+    "beef_patty_angus": {
+      "label": "美国安格斯牛肉饼(130g*6片/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 10,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 780,
+      "piecesPerUnit": 6,
+      "active": true
+    },
+    "beef_roll_fat": {
+      "label": "肥牛卷(300g/盒)",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 9.8,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 300.0,
+      "active": true
+    },
+    "beef_shank": {
+      "label": "五香卤牛腱肉",
+      "category": "Meats",
+      "unit": "份",
+      "lastPrice": 18,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "beef_short_rib": {
+      "label": "牛肋条",
+      "category": "Meats",
+      "unit": "kg",
+      "lastPrice": 22,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "active": true
+    },
+    "beef_slice_tender": {
+      "label": "嫩滑牛肉片(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 19,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "beef_tendon_ball_cs": {
+      "label": "潮汕牛筋丸",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 15.8,
+      "lastRound": "2026-09-11",
+      "active": true
+    },
+    "beef_tendon_plain": {
+      "label": "普通牛腱",
+      "category": "Meats",
+      "unit": "kg",
+      "lastPrice": 12,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "active": true
+    },
+    "blueberry_sa": {
+      "label": "CORE南非巨无霸大蓝莓",
+      "category": "Produce",
+      "unit": "桶",
+      "lastPrice": 7.9,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "blueberry_twotree": {
+      "label": "名牌Two Tree桶装Jumbo蓝莓(200g/桶)",
+      "category": "Produce",
+      "unit": "桶",
+      "lastPrice": 7.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 200,
+      "active": true
+    },
+    "bokchoy_sh": {
+      "label": "上海青(250g*2袋/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 3,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "broccoli": {
+      "label": "西兰花",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 5,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "broccolini": {
+      "label": "西兰苔",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 5,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "cabbage_baby": {
+      "label": "娃娃菜(300g*2包/份)",
+      "category": "Frozen",
+      "unit": "份",
+      "lastPrice": 4.4,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "cabbage_bj": {
+      "label": "北京包菜",
+      "category": "Frozen",
+      "unit": "粒",
+      "lastPrice": 2.5,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "celery": {
+      "label": "长嫩芹菜",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 3.5,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "celery_western": {
+      "label": "西芹",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 4,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "century": {
+      "label": "皮蛋鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "cherry_tomato": {
+      "label": "番夫子釜山88小番茄礼盒",
+      "category": "Produce",
+      "unit": "kg",
+      "aka": [
+        "番夫子釜山88小番茄"
+      ],
+      "lastPrice": 12.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "chicken_feet_lemon": {
+      "label": "柠檬无骨泡凤爪(170g/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 8.5,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "chicken_gambang": {
+      "label": "甘榜鸡",
+      "category": "Meats",
+      "unit": "kg",
+      "lastPrice": 13,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "active": true
+    },
+    "chicken_popcorn": {
+      "label": "香脆鸡米花(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "chicken_shred": {
+      "label": "香酥手撕鸡",
+      "category": "Meats",
+      "unit": "只",
+      "lastPrice": 20,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "chicken_wing_grilled": {
+      "label": "香烤鸡中翅(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 16.5,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "chili_luosi": {
+      "label": "螺丝椒",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "chili_oil_yao": {
+      "label": "幺麻子藤椒油",
+      "category": "Pantry",
+      "unit": "瓶",
+      "lastPrice": 9.2,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "chili_th": {
+      "label": "泰国小红尖椒",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 1.9,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "chili_yangjiao": {
+      "label": "羊角椒",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-01",
+      "weighMode": "weight",
+      "active": true
+    },
+    "chive": {
+      "label": "韭菜鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "coconut_jelly_taho": {
+      "label": "泰国Taho椰子冻(3粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 10,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 3,
+      "active": true
+    },
+    "corn": {
+      "label": "玉米鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "corn_47": {
+      "label": "北纬47度白糯玉米(10根/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 23.8,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 10,
+      "active": true
+    },
+    "corn_km": {
+      "label": "金马伦爆汁白玉米(4根/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 10,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "cucumber_fruit": {
+      "label": "水果黄瓜",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "dazao": {
+      "label": "脆甜大荔冬枣",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 10.5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "dragonfruit_red": {
+      "label": "中国红绣球火龙果(4粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "dragonfruit_white": {
+      "label": "越南白肉火龙果(4粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 5,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "duck_gizzard": {
+      "label": "双椒鸭胗",
+      "category": "Frozen",
+      "unit": "份",
+      "lastPrice": 5.8,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "duck_pipi": {
+      "label": "特色片皮鸭",
+      "category": "Frozen",
+      "unit": "只",
+      "lastPrice": 26,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "duck_shred": {
+      "label": "手撕香酥鸭",
+      "category": "Frozen",
+      "unit": "只",
+      "lastPrice": 24,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "duck_wing_salt": {
+      "label": "盐焗鸭翅",
+      "category": "Frozen",
+      "unit": "份",
+      "lastPrice": 6.5,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "dumpling_cabbage_pork": {
+      "label": "白菜猪肉水饺(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12.9,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "dumpling_corn_pork": {
+      "label": "玉米猪肉水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 13.9,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "dumpling_egg_chive": {
+      "label": "韭菜鸡蛋水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 12,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "egg_aa": {
+      "label": "AA级大鸡蛋",
+      "category": "Produce",
+      "unit": "盘",
+      "lastPrice": 8.5,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "egg_my": {
+      "label": "马来西亚土鸡蛋",
+      "category": "Produce",
+      "unit": "盘",
+      "lastPrice": 9.3,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "egg_my_box": {
+      "label": "马来西亚土鸡蛋(30粒/盒)",
+      "category": "Produce",
+      "unit": "盒",
+      "lastPrice": 9.3,
+      "lastRound": "2026-09-11",
+      "note": "Confirmed 2026-09-11 from the 永樂水饺 meat-round supplier (off that vendor's official list, price given directly by operator). Coincidentally identical price ($9.3) to the unrelated egg_my key (盘/tray, from the produce vendor) — do not merge; different supplier, different unit, kept separate on purpose.",
+      "piecesPerUnit": 30,
+      "active": true
+    },
+    "fish_barramundi": {
+      "label": "金目鲈(700-800g/条，已处理)",
+      "category": "Meats",
+      "unit": "条",
+      "lastPrice": 9.9,
+      "lastRound": "2026-09-11",
+      "active": true
+    },
+    "fish_black_slice": {
+      "label": "免浆黑鱼片(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 18,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "fish_dumpling_bayu": {
+      "label": "鲅鱼水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 17.9,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "flour": {
+      "label": "Baker's Choice特级面粉",
+      "category": "Pantry",
+      "unit": "袋",
+      "lastPrice": 3,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "fungus_black": {
+      "label": "新鲜木耳(200g*2盒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 3.6,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "garlic_brown_sugar": {
+      "label": "红糖蒜(350g/袋)",
+      "category": "Produce",
+      "unit": "袋",
+      "lastPrice": 5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 350,
+      "active": true
+    },
+    "garlic_scape": {
+      "label": "新鲜蒜苔",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "garlic_sprout": {
+      "label": "青蒜苗",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 4.5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "ginger_young": {
+      "label": "仔姜",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-01",
+      "weighMode": "weight",
+      "active": true
+    },
+    "grape_jufeng": {
+      "label": "福安巨峰",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 12.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "proportional",
+      "active": true
+    },
+    "grape_jufeng_ln": {
+      "label": "辽宁巨峰(3串/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 19.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "proportional",
+      "gramsPerUnit": 2800,
+      "piecesPerUnit": 3,
+      "active": true
+    },
+    "grape_nina": {
+      "label": "妮娜皇后小盒装(450g/盒)",
+      "category": "Produce",
+      "unit": "盒",
+      "lastPrice": 8.5,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "grape_raisin_xj": {
+      "label": "新疆黑加仑黑提",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 10.8,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "grape_xiaoguangtou": {
+      "label": "小光头辽宁巨峰(2.8kg左右/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "aka": [
+        "小光头辽宁巨峰"
+      ],
+      "note": "CAUTION: coincidentally shares the same $19.8 price and ~2.8kg box weight as grape_jufeng_ln (辽宁巨峰(3串/箱)) but is a genuinely different product — do not merge or confuse the two. Unlike grape_jufeng_ln's fixed 3 bunches/2.8kg box, this one has no fixed bunch count or fixed box weight (the label's '左右' means approximate); a box can arrive as one big ~2.8kg bunch or several smaller bunches, split among buyers by weighing whatever's actually in that specific box. Deliberately has no gramsPerUnit/piecesPerUnit — don't add either; the proportional editor's bunch-weight÷actual-box-total-weight calculation is the correct (and only) way to split this one.",
+      "lastPrice": 19.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "proportional",
+      "active": true
+    },
+    "green_bean_km": {
+      "label": "金马伦四季豆",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 4,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "herb_pork_dumpling": {
+      "label": "茴香猪肉水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 13.9,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "honey_plum": {
+      "label": "蜂糖李",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 10,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "huajuan": {
+      "label": "花卷(4个/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 5.5,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "jian_mian_chuan": {
+      "label": "烤面筋串(20串/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 20,
+      "active": true
+    },
+    "jiaobaisun": {
+      "label": "茭白笋",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "kelp_sprout": {
+      "label": "海带苗",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "kimchi_kr": {
+      "label": "韩国风味泡菜",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6.5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "kiwi": {
+      "label": "红心奇异果(2盒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 9,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 2,
+      "active": true
+    },
+    "kiwi_cuixiang": {
+      "label": "翠香猕猴桃",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "lamb_scorpion": {
+      "label": "羊蝎子(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 11,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "lamb_shoulder_roll": {
+      "label": "羊肩肉卷(300g/盒)",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 12,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 300.0,
+      "active": true
+    },
+    "lemon_cn": {
+      "label": "中国柠檬(5粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 3,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 5,
+      "active": true
+    },
+    "lemon_fujian": {
+      "label": "福建香水柠檬",
+      "category": "Produce",
+      "unit": "袋",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "lettuce_luomen": {
+      "label": "罗门生菜(500g/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 4.5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 500,
+      "active": true
+    },
+    "lettuce_youmai": {
+      "label": "油麦菜(300g*2袋/份)",
+      "category": "Pantry",
+      "unit": "份",
+      "aka": [
+        "油麦菜"
+      ],
+      "lastPrice": 4,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "lotus_root": {
+      "label": "洪湖莲藕",
+      "category": "Produce",
+      "unit": "kg",
+      "weighMode": "weight",
+      "active": true
+    },
+    "luffa_th": {
+      "label": "泰国丝瓜",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "mango_pzh": {
+      "label": "攀枝花凯特大芒果(4粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "aka": [
+        "攀枝花凯特大芒果(2粒/份)"
+      ],
+      "note": "CAUTION: not a pure relabel - the 2025-09-01 round sold this at $7/2粒 ($3.50/粒) and the 2025-09-10 round at $8/4粒 ($2.00/粒), a genuinely different deal under the same key. Per project convention this should have been a new key on 09-10 rather than reusing mango_pzh. Left as-is in both dated files (never edit past rounds), but do not treat past and current mango_pzh prices as comparable, and consider a distinct key (e.g. mango_pzh_4) if this exact 4粒 pack recurs.",
+      "lastPrice": 8,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "mantou_brownsugar": {
+      "label": "红糖馒头(5粒/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 4,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 5,
+      "active": true
+    },
+    "mantou_flower": {
+      "label": "鲜花馒头(4粒/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 5.7,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "mantou_milk_small": {
+      "label": "奶香小馒头(20粒/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 3.5,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 20,
+      "active": true
+    },
+    "mantou_plain": {
+      "label": "馒头(4个/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 5,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "mantou_pumpkin": {
+      "label": "南瓜馒头(4粒/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 5.2,
+      "lastRound": "2026-09-11",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "melon_niusan": {
+      "label": "牛三网纹瓜",
+      "category": "Produce",
+      "unit": "粒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "melon_wang": {
+      "label": "86王哈密瓜",
+      "category": "Produce",
+      "unit": "粒",
+      "lastPrice": 6.5,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "milk_hokkaido_12": {
+      "label": "北海道原味牛乳(12盒/箱)",
+      "category": "Pantry",
+      "unit": "箱",
+      "lastPrice": 22,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 12,
+      "active": true
+    },
+    "mochi_brownsugar": {
+      "label": "红糖爆浆糍粑",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 4.2,
+      "lastRound": "2026-09-11",
+      "active": true
+    },
+    "mooncake_maoshanwang": {
+      "label": "原味猫山王冰皮月饼",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 30,
+      "lastRound": "2026-09-11",
+      "active": true
+    },
+    "mush": {
+      "label": "香菇鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "mushroom_king": {
+      "label": "杏鲍菇(200g*2盒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 3.2,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "mushroom_mix": {
+      "label": "什锦菌菇",
+      "category": "Produce",
+      "unit": "盒",
+      "lastPrice": 3,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "mushroom_white": {
+      "label": "白色口蘑",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 10.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "nectarine_loose": {
+      "label": "散装芒果油桃(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 14,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "orange_locsweet": {
+      "label": "Loc sweet甜橙(12粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "aka": [
+        "Loc sweet甜橙(3kg/包)"
+      ],
+      "lastPrice": 15,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 12,
+      "active": true
+    },
+    "oyster_sauce_ht": {
+      "label": "海天上等蚝油(590g/瓶)",
+      "category": "Pantry",
+      "unit": "瓶",
+      "lastPrice": 3.7,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "passionfruit_qinmi": {
+      "label": "钦蜜百香果",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "peach_box_bj": {
+      "label": "白金水蜜桃礼盒(2.5kg左右/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 25.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2500,
+      "active": true
+    },
+    "peach_box_czd": {
+      "label": "川中岛水蜜桃礼盒(2.5kg左右/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "aka": [
+        "川中岛水蜜桃礼盒"
+      ],
+      "lastPrice": 25.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2500,
+      "active": true
+    },
+    "peach_box_lqy": {
+      "label": "龙泉驿凤凰水蜜桃礼盒(2.3kg/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 23.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2300,
+      "active": true
+    },
+    "peach_loose_bj": {
+      "label": "散装白金水蜜桃(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 14,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "peach_loose_czd": {
+      "label": "散装川中岛水蜜桃(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 14,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "peach_mix4": {
+      "label": "缤纷桃4粒拼装礼盒",
+      "category": "Produce",
+      "unit": "盒",
+      "lastPrice": 12.8,
+      "lastRound": "2026-09-01",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "peach_mix_gift": {
+      "label": "缤纷桃拼装小礼盒(4粒/份)",
+      "category": "Gifts",
+      "unit": "份",
+      "lastPrice": 10,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "peach_rainbow_loose": {
+      "label": "散装彩虹毛蟠桃(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 14,
+      "lastRound": "2026-09-01",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "peach_rainbow_oil": {
+      "label": "散装彩虹油蟠桃(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 16,
+      "lastRound": "2026-09-01",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "peach_rainbow_oil_loose": {
+      "label": "散装彩虹油蟠桃(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 16,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "peach_rainbow_unclear": {
+      "label": "彩虹蟠桃(品种待确认，6粒)",
+      "category": "Produce",
+      "unit": "盒",
+      "piecesPerUnit": 6,
+      "active": true
+    },
+    "pear_qiuyue": {
+      "label": "散装秋月梨(2kg左右/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000,
+      "active": true
+    },
+    "pear_qiuyue_box": {
+      "label": "秋月梨礼盒(3.5kg左右/箱，8粒)",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 23.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 3500,
+      "piecesPerUnit": 8,
+      "active": true
+    },
+    "pear_shaanxi": {
+      "label": "散装陕西酥梨(3kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 15,
+      "lastRound": "2026-09-01",
+      "weighMode": "weight",
+      "gramsPerUnit": 3000.0,
+      "active": true
+    },
+    "persimmon": {
+      "label": "火晶柿子(2盒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 9,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 2,
+      "active": true
+    },
+    "pomegranate": {
+      "label": "会理软籽石榴(4粒/份)",
+      "category": "Produce",
+      "unit": "份",
+      "lastPrice": 10,
+      "lastRound": "2026-09-01",
+      "piecesPerUnit": 4,
+      "active": true
+    },
+    "pomelo_taiwan": {
+      "label": "台湾老树文旦柚",
+      "category": "Produce",
+      "unit": "粒",
+      "lastPrice": 5.5,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "pork_blood_cp": {
+      "label": "CP猪血(400g/盒)",
+      "category": "Meats",
+      "unit": "盒",
+      "lastPrice": 7.8,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 400.0,
+      "active": true
+    },
+    "pork_bone_meat_fresh": {
+      "label": "新鲜大骨连肉(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 17,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000.0,
+      "active": true
+    },
+    "pork_loin_chunk": {
+      "label": "猪里脊切大块(1kg左右/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 8,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "pork_meirou_cn": {
+      "label": "湖南猪梅肉(500g/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 6.5,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 500.0,
+      "active": true
+    },
+    "pork_slivers": {
+      "label": "猪肉丝(300g/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 3.4,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 300.0,
+      "active": true
+    },
+    "pork_tongue": {
+      "label": "川卤猪舌头(2只/份)",
+      "category": "Meats",
+      "unit": "份",
+      "lastPrice": 8,
+      "lastRound": "2026-09-01",
+      "piecesPerUnit": 2,
+      "active": true
+    },
+    "potato_big": {
+      "label": "新鲜大土豆(约2kg/袋)",
+      "category": "Produce",
+      "unit": "袋",
+      "lastPrice": 5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000,
+      "active": true
+    },
+    "prune": {
+      "label": "新鲜甜西梅",
+      "category": "Produce",
+      "unit": "kg",
+      "aka": [
+        "新鲜西梅"
+      ],
+      "lastPrice": 10.8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "qinglongcai": {
+      "label": "青龙菜(2包/份)",
+      "category": "Frozen",
+      "unit": "份",
+      "lastPrice": 3.5,
+      "lastRound": "2026-09-01",
+      "piecesPerUnit": 2,
+      "active": true
+    },
+    "radish_spicy": {
+      "label": "四川麻辣萝卜干(500g/袋)",
+      "category": "Produce",
+      "unit": "袋",
+      "lastPrice": 8,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 500,
+      "active": true
+    },
+    "redpomelo": {
+      "label": "红文旦柚",
+      "category": "Produce",
+      "unit": "粒",
+      "lastPrice": 7.8,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "salted": {
+      "label": "咸蛋黄鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "seaweed": {
+      "label": "紫菜鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.8,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "shrimp": {
+      "label": "鲜虾鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 7.2,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "shrimp_dumpling": {
+      "label": "虾仁水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 17.9,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "sig": {
+      "label": "招牌鲜肉馄饨",
+      "category": "Frozen",
+      "unit": "盒",
+      "lastPrice": 6.5,
+      "lastRound": "2026-09-07",
+      "active": true
+    },
+    "soda_dayao": {
+      "label": "大窑橙诺汽水(480ml*12瓶/箱)",
+      "category": "Pantry",
+      "unit": "箱",
+      "lastPrice": 18,
+      "lastRound": "2026-09-10",
+      "piecesPerUnit": 12,
+      "active": true
+    },
+    "soy_sauce_light": {
+      "label": "海天味极鲜",
+      "category": "Pantry",
+      "unit": "瓶",
+      "lastPrice": 8.5,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "soy_sauce_light_ht": {
+      "label": "海天生抽(1.9L/瓶)",
+      "category": "Pantry",
+      "unit": "瓶",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "strawberry": {
+      "label": "澳洲草莓",
+      "category": "Produce",
+      "unit": "盒",
+      "lastPrice": 5.8,
+      "lastRound": "2026-09-01",
+      "active": true
+    },
+    "sweetpotato_durian": {
+      "label": "榴莲蜜薯(500g*2包/份)",
+      "category": "Frozen",
+      "unit": "份",
+      "lastPrice": 5.6,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "tangerine_seedless": {
+      "label": "无籽蜜橘(2kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 10,
+      "lastRound": "2026-09-01",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000,
+      "active": true
+    },
+    "tangerine_seedless_big": {
+      "label": "少籽大蜜橘(2kg左右/包，约8粒)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 10,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "gramsPerUnit": 2000,
+      "piecesPerUnit": 8,
+      "active": true
+    },
+    "taro_small": {
+      "label": "奶心小芋头",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 5,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "tomato_provence": {
+      "label": "普罗旺斯番茄",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "vinegar": {
+      "label": "恒顺镇江香醋",
+      "category": "Pantry",
+      "unit": "瓶",
+      "lastPrice": 2.9,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "watermelon_my": {
+      "label": "马来西亚少籽西瓜(3-4kg/粒)",
+      "category": "Produce",
+      "unit": "粒",
+      "lastPrice": 4.2,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "wonton_shanghai_qing": {
+      "label": "上海青鲜肉馄饨(550g/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 550.0,
+      "active": true
+    },
+    "wtmelon": {
+      "label": "泰国薄皮黑籽小西瓜",
+      "category": "Produce",
+      "unit": "粒",
+      "lastPrice": 5.8,
+      "lastRound": "2026-09-10",
+      "active": true
+    },
+    "xlb_soup": {
+      "label": "灌汤小笼包(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 13.8,
+      "lastRound": "2026-09-11",
+      "weighMode": "weight",
+      "gramsPerUnit": 1000.0,
+      "active": true
+    },
+    "yam": {
+      "label": "铁棍山药",
+      "category": "Produce",
+      "unit": "kg",
+      "lastPrice": 6,
+      "lastRound": "2026-09-10",
+      "weighMode": "weight",
+      "active": true
+    },
+    "gift_snack_random": {
+      "label": "随机小零食(赠品)",
+      "category": "Gifts",
+      "unit": "包",
+      "active": true
+    },
+    "grape_jufeng_family": {
+      "label": "辽宁巨峰家庭版(4串/箱)",
+      "category": "Produce",
+      "unit": "箱",
+      "lastPrice": 24.8,
+      "weighMode": "proportional",
+      "gramsPerUnit": 3800,
+      "piecesPerUnit": 4,
+      "aka": [
+        "辽宁巨峰家庭版"
+      ],
+      "active": true
+    },
+    "dumpling_chive_pork": {
+      "label": "韭菜猪肉水饺(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_celery_pork": {
+      "label": "芹菜猪肉水饺(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_chicken_mushroom": {
+      "label": "鸡肉香菇水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 12.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_mushroom_pork": {
+      "label": "香菇猪肉水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 13.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_pickled_pork": {
+      "label": "酸菜猪肉水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 13.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_onion_beef": {
+      "label": "洋葱牛肉水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 14.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_cuttlefish": {
+      "label": "墨鱼水饺(1kg/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 17.9,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "xlb_truffle": {
+      "label": "黑松露小笼包(425g/袋)",
+      "category": "Frozen",
+      "unit": "袋",
+      "lastPrice": 12,
+      "weighMode": "weight",
+      "gramsPerUnit": 425,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list. Smaller 425g pack, NOT the 1kg xlb_soup — does not qualify for the vendor's buy-1kg-get-a-snack promo. Not yet used in an actual dated round.",
+      "active": true
+    },
+    "pumpkin_cake": {
+      "label": "南瓜饼(1kg/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 14,
+      "weighMode": "weight",
+      "gramsPerUnit": 1000,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list. A pastry, not a 水饺/小笼包 — despite being 1kg, does not qualify for the vendor's buy-1kg-dumpling-get-a-snack promo. Not yet used in an actual dated round.",
+      "active": true
+    },
+    "wonton_pork_plain": {
+      "label": "鲜肉馄饨(550g/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12,
+      "weighMode": "weight",
+      "gramsPerUnit": 550,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list. Distinct from the existing 招牌鲜肉馄饨 (key `sig`, $6.5/盒, no stated weight) — different vendor/pack/price, not a relabel. Not yet used in an actual dated round.",
+      "active": true
+    },
+    "wonton_shrimp_pork": {
+      "label": "虾仁猪肉馄饨(550g/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 13,
+      "weighMode": "weight",
+      "gramsPerUnit": 550,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list. Distinct from the existing 鲜虾鲜肉馄饨 (key `shrimp`, $7.2/盒) — different vendor/pack/price, not a relabel. Not yet used in an actual dated round.",
+      "active": true
+    },
+    "zibo_pancake": {
+      "label": "淄博小饼(10片/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 4,
+      "piecesPerUnit": 10,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "chive_box": {
+      "label": "韭菜盒子(8片/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 9,
+      "piecesPerUnit": 8,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "soup_bun_pork": {
+      "label": "猪肉灌汤包(4粒/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 6,
+      "piecesPerUnit": 4,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "veggie_mushroom_bun": {
+      "label": "香菇青菜包(4粒/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 6,
+      "piecesPerUnit": 4,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "laotongguan_pancake": {
+      "label": "老潼关千层饼(10片/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 12,
+      "piecesPerUnit": 10,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list; not yet used in an actual dated round.",
+      "active": true
+    },
+    "dumpling_cabbage_pork_flawed": {
+      "label": "瑕疵白菜猪肉水饺(500g/包)",
+      "category": "Frozen",
+      "unit": "包",
+      "lastPrice": 5,
+      "weighMode": "weight",
+      "gramsPerUnit": 500,
+      "note": "Added 2026-09-14 from 永樂水饺 vendor price list. A discounted/cosmetic-defect version of dumpling_cabbage_pork (500g pack at $5, vs. the regular 1kg pack at $12.9) — kept as its own key per project convention (different price/pack size, never overload an existing key). Does not qualify for the buy-1kg-get-a-snack promo (not a full 1kg pack, and already discounted). Not yet used in an actual dated round.",
+      "active": true
+    }
+  }
+}

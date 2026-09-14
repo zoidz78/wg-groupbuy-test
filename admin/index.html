@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>团购后台管理 - WG-Groupbuy Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased pb-28">
+
+  <!-- Admin Navigation Header -->
+  <header class="sticky top-0 z-20 bg-slate-900 text-white p-4 shadow-md flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-bold flex items-center gap-2">
+        <span>⚙️ 团购后台管理</span>
+        <span id="round-status-badge" class="text-[10px] bg-slate-500/20 text-slate-400 border border-slate-500/30 px-2 py-0.5 rounded-full font-normal">无进行中团购</span>
+      </h1>
+      <p class="text-xs text-slate-400 mt-0.5" id="round-title-display">当前没有已上架的团购</p>
+    </div>
+    <!-- D62: absolute path per README.md Step 3 -->
+    <a href="/admin/dashboard.html" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300 font-medium transition-all flex items-center gap-1">
+      📊 支付看板
+    </a>
+  </header>
+
+  <!-- Step 1 Initial Action Modal -->
+  <div id="init-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl space-y-4">
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">🛒</div>
+      <div>
+        <h3 class="font-bold text-slate-800 text-lg">团购期数管理</h3>
+        <p class="text-xs text-slate-500 mt-1">请选择您接下来要进行的操作</p>
+      </div>
+      <div class="space-y-2 pt-2">
+        <button onclick="startNewRoundFlow()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl text-sm shadow transition-all flex items-center justify-center gap-2">
+          <span>➕</span> 发起新一期团购
+        </button>
+        <button id="review-round-btn" onclick="reviewCurrentRoundFlow()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm border border-slate-300 transition-all flex items-center justify-center gap-2">
+          <span>📋</span> 查看/管理当前活跃接龙
+        </button>
+        <p id="review-round-disabled-note" class="text-[11px] text-slate-400 hidden">目前没有进行中的团购，无法查看</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- Active Tab Selector -->
+    <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-semibold text-slate-600">
+      <button id="tab-btn-catalog" onclick="switchAdminTab('catalog')" class="flex-1 py-2 rounded-lg bg-white text-emerald-700 shadow-sm transition-all text-center">商品上架与定价</button>
+      <button id="tab-btn-orders" onclick="switchAdminTab('orders')" class="flex-1 py-2 rounded-lg transition-all text-center">实时订单审核 (<span id="live-order-count">0</span>)</button>
+    </div>
+
+    <!-- SECTION 1: Catalog Toggle & Pricing Setup -->
+    <div id="section-catalog" class="space-y-4">
+
+      <!-- Round Info Metadata -->
+      <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">团购日期</label>
+          <input type="date" id="round-date-input" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">团购期数 / 日期标识 (manifest label)</label>
+          <input type="text" id="round-label-input" placeholder="例如: 9/13" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">到货通知提示词 (itemsLabel，可留空)</label>
+          <input type="text" id="items-label-input" placeholder="例如: 金钱腱、甘榜鸡、海鲜及水果" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        </div>
+      </section>
+
+      <!-- Search -->
+      <section class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+        <input type="text" id="catalog-search-input" placeholder="🔍 搜索商品名 / key / 别名" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      </section>
+
+      <!-- Category Navigation Filter -->
+      <nav class="flex gap-2 overflow-x-auto pb-1 text-sm no-scrollbar" id="admin-category-tabs"></nav>
+
+      <div class="flex items-center justify-between px-1">
+        <label class="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+          <input type="checkbox" id="only-selected-checkbox" onchange="onOnlySelectedChange()" class="w-3.5 h-3.5">
+          仅看已选 (<span id="selected-count">0</span>)
+        </label>
+        <button onclick="applyCarryOverFromLastRound()" id="carry-over-btn" class="text-xs bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-300 px-3 py-1.5 rounded-lg font-medium transition-all">
+          ⟳ 一键沿用上期
+        </button>
+      </div>
+
+      <!-- Add New Custom Product Trigger -->
+      <button onclick="openNewProductModal()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 border-dashed font-semibold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all">
+        <span>✨</span> 添加全新临时/季节商品
+      </button>
+
+      <!-- Admin Product Catalog List -->
+      <section id="admin-product-list" class="space-y-3"></section>
+
+    </div>
+
+    <!-- SECTION 2: Real-time Order Audit -->
+    <div id="section-orders" class="space-y-4 hidden">
+
+      <div id="orders-signin-prompt" class="bg-amber-50 border border-amber-300 text-amber-800 text-xs p-3 rounded-xl hidden">
+        请先登录管理员账号才能查看订单
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-xs text-slate-400 block">已接龙总人数</span>
+          <span class="text-lg font-bold text-slate-800" id="stat-people-count">0 人</span>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="text-xs text-slate-400 block">当前预估订单额</span>
+          <span class="text-lg font-bold text-emerald-600" id="stat-total-amount">$0.00</span>
+        </div>
+      </div>
+
+      <section class="space-y-3" id="orders-list-container"></section>
+
+    </div>
+
+  </main>
+
+  <!-- Sticky Bottom Controls -->
+  <div class="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 p-4 shadow-lg">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      <button onclick="publishOrUpdateRound()" class="flex-1 bg-slate-800 hover:bg-slate-900 active:bg-black text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow">
+        🚀 上架/更新本期接龙
+      </button>
+      <button onclick="closeAndExportRound()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow">
+        🔒 截团并导出
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: Add New Product Form -->
+  <div id="new-product-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 hidden">
+    <div class="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto">
+      <h3 class="font-bold text-slate-800 text-sm">添加新商品</h3>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">商品名称</label>
+        <input type="text" id="new-p-label" placeholder="攀枝花芒果" oninput="autoGenerateKey(this.value)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">唯一 ID Key (snake_case)</label>
+        <input type="text" id="new-p-key" placeholder="mango_pzh" oninput="checkKeyCollision()" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        <p id="key-warning" class="text-[10px] text-red-500 mt-1 hidden">⚠️ 该 ID 已被占用！请修改后再保存 — 重复 ID 会覆盖历史数据。</p>
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">分类</label>
+        <select id="new-p-category" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white">
+          <option value="Produce">生鲜果蔬</option>
+          <option value="Meats">肉类</option>
+          <option value="Frozen">冷冻速食</option>
+          <option value="Pantry">杂货</option>
+          <option value="Gifts">赠品</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">单价 ($)</label>
+          <input type="number" id="new-p-price" step="0.1" value="0" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">单位</label>
+          <input type="text" id="new-p-unit" value="盒" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">称重模式</label>
+        <select id="new-p-weighmode" onchange="onWeighModeChange()" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white">
+          <option value="">无 (按份/盒/袋等计数)</option>
+          <option value="weight">称重 (weight)</option>
+          <option value="proportional">分箱 (proportional)</option>
+        </select>
+      </div>
+      <div id="new-p-gramsperunit-wrap" class="hidden">
+        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">每单位克重 (gramsPerUnit)</label>
+        <input type="number" id="new-p-gramsperunit" placeholder="例如 1000" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">每份颗数 (piecesPerUnit，可留空)</label>
+        <input type="number" id="new-p-piecesperunit" placeholder="例如 5" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeNewProductModal()" class="flex-1 bg-slate-100 text-slate-600 py-2 rounded-xl text-xs font-semibold">取消</button>
+        <button id="save-new-product-btn" onclick="saveNewProduct()" class="flex-1 bg-emerald-600 text-white py-2 rounded-xl text-xs font-semibold">保存上架</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Export -->
+  <div id="export-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 hidden">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-800 text-sm">✅ 已截团！导出文件</h3>
+        <button onclick="closeExportModal()" class="text-slate-400 text-base font-bold">✕</button>
+      </div>
+
+      <div>
+        <p class="text-xs text-slate-500 mb-1">data-&lt;date&gt;.json</p>
+        <textarea id="json-export-output" readonly class="w-full h-32 p-2.5 bg-slate-900 text-emerald-400 font-mono text-[11px] rounded-xl border border-slate-800 focus:outline-none no-scrollbar"></textarea>
+        <div class="flex gap-2 mt-2">
+          <button onclick="downloadDataFile()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-xl text-xs font-semibold">⬇️ 下载 JSON</button>
+          <button onclick="copyExportedJSON()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-semibold">📋 复制</button>
+        </div>
+      </div>
+
+      <div id="manifest-export-block">
+        <p class="text-xs text-slate-500 mb-1" id="manifest-version-line">manifest.json</p>
+        <textarea id="manifest-export-output" readonly class="w-full h-32 p-2.5 bg-slate-900 text-sky-400 font-mono text-[11px] rounded-xl border border-slate-800 focus:outline-none no-scrollbar"></textarea>
+        <div class="flex gap-2 mt-2">
+          <button id="download-manifest-btn" onclick="downloadManifestFile()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-xl text-xs font-semibold">⬇️ 下载 manifest</button>
+          <button id="copy-manifest-btn" onclick="copyExportedManifest()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-semibold">📋 复制</button>
+        </div>
+      </div>
+
+      <div id="manifest-degraded-warning" class="bg-red-50 border border-red-300 text-red-700 text-[11px] p-2.5 rounded-lg hidden">
+        ⚠️ 无法读取现有 manifest.json，为避免覆盖历史记录，manifest 下载已禁用。
+        请手动将以下内容添加进 manifest.json 的 groupBuys 数组：
+        <pre id="manifest-fallback-entry" class="mt-1.5 bg-white border border-red-200 rounded p-1.5 text-[10px] overflow-x-auto"></pre>
+      </div>
+
+      <button onclick="downloadAllExportFiles()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-semibold shadow">
+        ⬇️ 下载全部 (2 个文件)
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    // ============================================================
+    // §5.1 Cache busting — mandatory house rule (D17)
+    // ============================================================
+    const BOOT_TS = Date.now();
+    function noCacheUrl(url) {
+      return url + (url.indexOf("?") === -1 ? "?" : "&") + "v=" + BOOT_TS;
+    }
+    const NO_STORE = { cache: "no-store" };
+
+    // Both static-file directories live one level up from admin/.
+    const DATA_BASE = "../";
+    function dataUrl(file) { return DATA_BASE + file; }
+
+    // ============================================================
+    // §5.2 Categories (D19)
+    // ============================================================
+    const CATEGORIES = [
+      { key: "all",     label: "全部"     },
+      { key: "Produce", label: "生鲜果蔬" },
+      { key: "Meats",   label: "肉类"     },
+      { key: "Frozen",  label: "冷冻速食" },
+      { key: "Pantry",  label: "杂货"     },
+      { key: "Gifts",   label: "赠品"     },
+    ];
+
+    // ============================================================
+    // §5.3 Storage adapter — one interface, two implementations, one flag.
+    // Byte-identical to index.html's copy (D4) except where noted below.
+    // ============================================================
+    const USE_FIRESTORE = false;
+
+    const LS_OPEN_ROUND_KEY = "wggb:openRound";
+    function roundKey(date)  { return `wggb:round:${date}`; }
+    function ordersKey(date) { return `wggb:orders:${date}`; }
+
+    function readJSON(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) { return fallback; }
+    }
+    function writeJSON(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+    function genOrderId() {
+      return "o_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    }
+
+    const roundListeners = [];
+    const orderListenersByDate = {};
+    function notifyRoundListeners()     { roundListeners.forEach(fn => fn()); }
+    function notifyOrderListeners(date) { (orderListenersByDate[date] || []).forEach(fn => fn()); }
+
+    const localStore = {
+      async signInAdmin() { return { uid: "local-admin" }; },
+
+      async publishRound(round) {
+        writeJSON(roundKey(round.date), round);
+        localStorage.setItem(LS_OPEN_ROUND_KEY, round.date);
+        notifyRoundListeners();
+      },
+
+      async closeRound(date) {
+        const round = readJSON(roundKey(date), null);
+        if (!round) return;
+        round.status = "closed";
+        round.closedAt = new Date().toISOString();
+        writeJSON(roundKey(date), round);
+        notifyRoundListeners();
+      },
+
+      subscribeRound(date, cb, onErr) {
+        function load() {
+          try {
+            const activeDate = date || localStorage.getItem(LS_OPEN_ROUND_KEY);
+            cb(activeDate ? readJSON(roundKey(activeDate), null) : null);
+          } catch (e) { onErr && onErr(e); }
+        }
+        load();
+        roundListeners.push(load);
+        function onStorage(e) {
+          if (!e.key || e.key === LS_OPEN_ROUND_KEY || e.key.startsWith("wggb:round:")) load();
+        }
+        window.addEventListener("storage", onStorage);
+        return () => {
+          window.removeEventListener("storage", onStorage);
+          const i = roundListeners.indexOf(load);
+          if (i >= 0) roundListeners.splice(i, 1);
+        };
+      },
+
+      subscribeOrders(date, cb, onErr) {
+        function load() {
+          try { cb(readJSON(ordersKey(date), [])); } catch (e) { onErr && onErr(e); }
+        }
+        load();
+        orderListenersByDate[date] = orderListenersByDate[date] || [];
+        orderListenersByDate[date].push(load);
+        function onStorage(e) {
+          if (!e.key || e.key === ordersKey(date)) load();
+        }
+        window.addEventListener("storage", onStorage);
+        return () => {
+          window.removeEventListener("storage", onStorage);
+          const arr = orderListenersByDate[date] || [];
+          const i = arr.indexOf(load);
+          if (i >= 0) arr.splice(i, 1);
+        };
+      },
+
+      async submitOrder(date, payload) {
+        const orders = readJSON(ordersKey(date), []);
+        const doc = { id: genOrderId(), ...payload };
+        orders.push(doc);
+        writeJSON(ordersKey(date), orders);
+        notifyOrderListeners(date);
+        return doc.id;
+      },
+
+      async updateOrderItem(date, orderId, itemKey, qty) {
+        const orders = readJSON(ordersKey(date), []);
+        const o = orders.find(x => x.id === orderId);
+        if (!o) return;
+        if (qty <= 0) delete o.items[itemKey];
+        else o.items[itemKey] = qty;
+        writeJSON(ordersKey(date), orders);
+        notifyOrderListeners(date);
+      },
+
+      async deleteOrder(date, orderId) {
+        const orders = readJSON(ordersKey(date), []).filter(o => o.id !== orderId);
+        writeJSON(ordersKey(date), orders);
+        notifyOrderListeners(date);
+      },
+    };
+
+    // Written fully per §8.2/§8.3, left disconnected until D73/D79 land.
+    async function createFirestoreStore() {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js");
+      const { getAuth, signInWithEmailLink, isSignInWithEmailLink } =
+        await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js");
+      const { getFirestore, doc, collection, addDoc, updateDoc, deleteDoc,
+               onSnapshot, setDoc, query, orderBy } =
+        await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js");
+
+      // NEW project only — see §8.1/D67. Never the wg-group-buy config here.
+      const firebaseConfig = {
+        apiKey:            "<new project — human supplies, see D73>",
+        authDomain:        "<new project>.firebaseapp.com",
+        projectId:         "<new project>",
+        storageBucket:     "<new project>.firebasestorage.app",
+        messagingSenderId: "<new project>",
+        appId:             "<new project>",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      return {
+        async signInAdmin() {
+          // Email-link sign-in (D74). This is the ADMIN page, so unlike the
+          // cart's copy of this adapter, this is where the real flow must
+          // eventually be wired: sendSignInLinkToEmail() behind a "发送登录链接"
+          // button, then signInWithEmailLink() on return. Left unimplemented
+          // pending D74/D79 (provider not yet enabled, no UIDs collected).
+          throw new Error("firestoreStore.signInAdmin not wired yet — see D74/D79");
+        },
+        async publishRound(round) {
+          await setDoc(doc(db, "rounds", round.date), round);
+        },
+        async closeRound(date) {
+          await updateDoc(doc(db, "rounds", date), { status: "closed", closedAt: new Date().toISOString() });
+        },
+        subscribeRound(date, cb, onErr) {
+          if (date) {
+            return onSnapshot(doc(db, "rounds", date), snap => cb(snap.exists() ? snap.data() : null), err => {
+              console.error("rounds onSnapshot 出错：", err);
+              onErr && onErr(err);
+            });
+          }
+          throw new Error("firestoreStore.subscribeRound(null, ...) needs an 'open round' pointer doc — not designed yet");
+        },
+        subscribeOrders(date, cb, onErr) {
+          // No precedent in dashboard.html for a collection-level listener —
+          // flagged in BUILD-PLAN §5.3 as most likely to need debugging when
+          // the flag is first flipped.
+          const q = query(collection(db, "rounds", date, "orders"), orderBy("submittedAt", "asc"));
+          return onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))), err => {
+            console.error("orders onSnapshot 出错：", err);
+            onErr && onErr(err);
+          });
+        },
+        async submitOrder(date, payload) {
+          const ref = await addDoc(collection(db, "rounds", date, "orders"), payload);
+          return ref.id;
+        },
+        async updateOrderItem(date, orderId, itemKey, qty) {
+          const ref = doc(db, "rounds", date, "orders", orderId);
+          const field = `items.${itemKey}`;
+          await updateDoc(ref, qty > 0 ? { [field]: qty } : { [field]: undefined });
+        },
+        async deleteOrder(date, orderId) {
+          await deleteDoc(doc(db, "rounds", date, "orders", orderId));
+        },
+      };
+    }
+
+    const store = USE_FIRESTORE ? await createFirestoreStore() : localStore;
+
+    // ============================================================
+    // §1.3 Emoji is derived, never stored (D18)
+    // ============================================================
+    let EMOJI_MAP = { defaultEmoji: "🛒", categories: [] };
+    async function loadEmojiMap() {
+      try {
+        const res = await fetch(noCacheUrl(dataUrl("product-emoji-map.json")), NO_STORE);
+        if (res.ok) EMOJI_MAP = await res.json();
+      } catch (e) {
+        console.error("product-emoji-map.json 读取失败，使用默认图标", e);
+      }
+    }
+    function productEmoji(label) {
+      const cats = EMOJI_MAP.categories || [];
+      for (const cat of cats) {
+        if ((cat.keywords || []).some(kw => label.includes(kw))) return cat.emoji;
+      }
+      return EMOJI_MAP.defaultEmoji || "🛒";
+    }
+    function emojiLabel(info) {
+      return `${productEmoji(info.label)} ${info.label}`;
+    }
+
+    // ============================================================
+    // §2.1 Catalog — 171 real products (D5: now deployed and fetched here)
+    // ============================================================
+    let catalog = {};          // key -> {label, category, unit, active, lastPrice?, lastRound?, weighMode?, gramsPerUnit?, piecesPerUnit?, note?, aka?}
+    let customProducts = {};   // same shape, added ad-hoc this session (D30)
+    let selected = new Set();  // keys toggled ON for the round being built
+    let roundPrices = {};      // key -> price override for this round
+    let searchQuery = "";
+    let activeCategory = "all";
+    let onlySelected = false;
+    let isComposing = false;   // IME guard (D24)
+
+    async function loadCatalog() {
+      try {
+        const res = await fetch(noCacheUrl(dataUrl("product-catalog.json")), NO_STORE);
+        if (res.ok) {
+          const json = await res.json();
+          catalog = json.products || {};
+        }
+      } catch (e) {
+        console.error("product-catalog.json 读取失败", e);
+      }
+    }
+
+    function allEntries() {
+      // customProducts intentionally overlays catalog so a session-added
+      // product with a colliding key is unreachable — but saveNewProduct()
+      // blocks that collision outright (D29), so this should never matter.
+      return { ...catalog, ...customProducts };
+    }
+
+    function mostRecentLastRound() {
+      let best = null;
+      for (const p of Object.values(catalog)) {
+        if (p.lastRound && (!best || p.lastRound > best)) best = p.lastRound;
+      }
+      return best;
+    }
+
+    // ============================================================
+    // Catalog screen — search / category / selection state
+    // ============================================================
+    function matchesSearch(key, entry, q) {
+      if (!q) return true;
+      const hay = [entry.label, key, ...(entry.aka || [])].join(" ").toLowerCase();
+      return hay.includes(q.toLowerCase());
+    }
+
+    function categoryCounts() {
+      const counts = { all: 0 };
+      for (const p of Object.values(allEntries())) {
+        counts.all++;
+        counts[p.category] = (counts[p.category] || 0) + 1;
+      }
+      return counts;
+    }
+
+    function filteredEntries() {
+      const entries = Object.entries(allEntries());
+      return entries.filter(([key, p]) => {
+        if (p.active === false) return false;
+        if (activeCategory !== "all" && p.category !== activeCategory) return false;
+        if (onlySelected && !selected.has(key)) return false;
+        if (!matchesSearch(key, p, searchQuery)) return false;
+        return true;
+      });
+    }
+
+    function renderCategoryTabs() {
+      const counts = categoryCounts();
+      const nav = document.getElementById("admin-category-tabs");
+      nav.innerHTML = CATEGORIES.map(c => {
+        const n = c.key === "all" ? counts.all : (counts[c.key] || 0);
+        const active = c.key === activeCategory;
+        return `
+          <button onclick="filterAdminCategory('${c.key}')"
+            class="admin-cat-btn ${active ? "active bg-slate-800 text-white" : "bg-white text-slate-600 border border-slate-200"} px-3.5 py-1 rounded-full whitespace-nowrap text-xs font-medium"
+            data-cat="${c.key}">${c.label} ${n}</button>
+        `;
+      }).join("");
+    }
+
+    function filterAdminCategory(cat) {
+      activeCategory = cat;
+      renderCategoryTabs();
+      renderAdminCatalog();
+    }
+    window.filterAdminCategory = filterAdminCategory;
+
+    function onOnlySelectedChange() {
+      onlySelected = document.getElementById("only-selected-checkbox").checked;
+      renderAdminCatalog();
+    }
+    window.onOnlySelectedChange = onOnlySelectedChange;
+
+    function toggleProductSelected(key, checked) {
+      const entry = allEntries()[key];
+      if (checked) {
+        selected.add(key);
+        // Seed price from lastPrice on toggle-on, but never clobber a price
+        // the admin already typed in (D27: always individually editable).
+        if (roundPrices[key] === undefined) {
+          roundPrices[key] = entry.lastPrice !== undefined ? entry.lastPrice : "";
+        }
+      } else {
+        selected.delete(key);
+      }
+      updateSelectedCount();
+      renderAdminCatalog();
+    }
+    window.toggleProductSelected = toggleProductSelected;
+
+    function updateProductPrice(key, value) {
+      roundPrices[key] = value === "" ? "" : parseFloat(value);
+    }
+    window.updateProductPrice = updateProductPrice;
+
+    function updateSelectedCount() {
+      document.getElementById("selected-count").innerText = selected.size;
+    }
+
+    function applyCarryOverFromLastRound() {
+      const lastRound = mostRecentLastRound();
+      if (!lastRound) { alert("没有可沿用的历史数据"); return; }
+      let count = 0;
+      for (const [key, p] of Object.entries(catalog)) {
+        if (p.lastRound === lastRound) {
+          selected.add(key);
+          roundPrices[key] = p.lastPrice !== undefined ? p.lastPrice : "";
+          count++;
+        }
+      }
+      updateSelectedCount();
+      renderAdminCatalog();
+      alert(`已沿用 ${lastRound} 的 ${count} 项商品及价格`);
+    }
+    window.applyCarryOverFromLastRound = applyCarryOverFromLastRound;
+
+    function renderAdminCatalog() {
+      const container = document.getElementById("admin-product-list");
+      const entries = filteredEntries();
+
+      container.innerHTML = entries.map(([key, p]) => {
+        const isSelected = selected.has(key);
+        const price = roundPrices[key];
+        const priceMissing = price === undefined || price === "" || Number.isNaN(price);
+        const badge = p.weighMode === "weight" ? '<span class="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.2 rounded">称重</span>'
+                    : p.weighMode === "proportional" ? '<span class="text-[9px] bg-sky-100 text-sky-700 px-1 py-0.2 rounded">分箱</span>'
+                    : "";
+        const lastInfo = p.lastPrice !== undefined
+          ? `上期 $${Number(p.lastPrice).toFixed(2)}${p.lastRound ? ` (${p.lastRound})` : ""}`
+          : `<span class="text-red-500">无历史价格，需手动填写</span>`;
+        const noteLine = p.note ? `<p class="text-[10px] text-slate-400 mt-1">📝 ${p.note}</p>` : "";
+        const akaLine = p.aka && p.aka.length ? `<p class="text-[10px] text-slate-400">又称: ${p.aka.join("、")}</p>` : "";
+
+        return `
+          <div class="bg-white p-3.5 rounded-xl shadow-sm border transition-all ${isSelected ? "border-slate-200" : "border-slate-100 opacity-60"}">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-1.5 font-medium text-slate-800 text-sm">
+                <span>${emojiLabel(p)}</span>
+                ${badge}
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" ${isSelected ? "checked" : ""} onchange="toggleProductSelected('${key}', this.checked)" class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono">${key} · ${lastInfo}</div>
+            ${akaLine}${noteLine}
+            <div class="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-slate-100 text-xs">
+              <div class="text-slate-500">本期价格</div>
+              <div class="flex items-center gap-1">
+                <span class="${priceMissing ? "text-red-500" : "text-slate-400"}">$</span>
+                <input type="number" step="0.1" value="${priceMissing ? "" : price}"
+                  onchange="updateProductPrice('${key}', this.value)"
+                  class="w-16 px-1.5 py-0.5 border ${priceMissing ? "border-red-400 bg-red-50" : "border-slate-300"} rounded text-right font-bold text-emerald-600 focus:ring-1 focus:ring-emerald-500 focus:outline-none">
+                <span class="text-slate-400">/${p.unit}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Search box — IME composition guard (D24). Without this, typing
+    // Chinese via pinyin fires a filter on every intermediate keystroke and
+    // the list thrashes mid-composition.
+    function wireSearchInput() {
+      const input = document.getElementById("catalog-search-input");
+      input.addEventListener("compositionstart", () => { isComposing = true; });
+      input.addEventListener("compositionend", () => {
+        isComposing = false;
+        searchQuery = input.value;
+        renderAdminCatalog();
+      });
+      input.addEventListener("input", () => {
+        if (isComposing) return;
+        searchQuery = input.value;
+        renderAdminCatalog();
+      });
+    }
+
+    // ============================================================
+    // New-product modal (D29) — emoji dropped (derived, §1.3), key
+    // collision BLOCKS save rather than just warning.
+    // ============================================================
+    function openNewProductModal() {
+      document.getElementById("new-p-label").value = "";
+      document.getElementById("new-p-key").value = "";
+      document.getElementById("new-p-price").value = "0";
+      document.getElementById("new-p-unit").value = "盒";
+      document.getElementById("new-p-weighmode").value = "";
+      document.getElementById("new-p-gramsperunit").value = "";
+      document.getElementById("new-p-piecesperunit").value = "";
+      document.getElementById("key-warning").classList.add("hidden");
+      document.getElementById("save-new-product-btn").disabled = false;
+      onWeighModeChange();
+      document.getElementById("new-product-modal").classList.remove("hidden");
+    }
+    window.openNewProductModal = openNewProductModal;
+
+    function closeNewProductModal() {
+      document.getElementById("new-product-modal").classList.add("hidden");
+    }
+    window.closeNewProductModal = closeNewProductModal;
+
+    function slugify(label) {
+      return label.trim().toLowerCase()
+        .replace(/[^\w\s一-龥-]/g, "")
+        .replace(/[\s_-]+/g, "_");
+    }
+
+    function autoGenerateKey(label) {
+      const generated = slugify(label);
+      document.getElementById("new-p-key").value = generated ? `item_${generated}` : "";
+      checkKeyCollision();
+    }
+    window.autoGenerateKey = autoGenerateKey;
+
+    function checkKeyCollision() {
+      const key = document.getElementById("new-p-key").value.trim();
+      const exists = key && Object.prototype.hasOwnProperty.call(allEntries(), key);
+      document.getElementById("key-warning").classList.toggle("hidden", !exists);
+      document.getElementById("save-new-product-btn").disabled = exists;
+      return exists;
+    }
+    window.checkKeyCollision = checkKeyCollision;
+
+    function onWeighModeChange() {
+      const mode = document.getElementById("new-p-weighmode").value;
+      document.getElementById("new-p-gramsperunit-wrap").classList.toggle("hidden", mode !== "weight");
+    }
+    window.onWeighModeChange = onWeighModeChange;
+
+    function saveNewProduct() {
+      if (checkKeyCollision()) return; // D29: blocks, not just warns
+
+      const label = document.getElementById("new-p-label").value.trim();
+      const key = document.getElementById("new-p-key").value.trim();
+      const price = parseFloat(document.getElementById("new-p-price").value) || 0;
+      const unit = document.getElementById("new-p-unit").value.trim() || "盒";
+      const category = document.getElementById("new-p-category").value;
+      const weighMode = document.getElementById("new-p-weighmode").value || undefined;
+      const gramsPerUnit = weighMode === "weight"
+        ? (parseInt(document.getElementById("new-p-gramsperunit").value, 10) || undefined)
+        : undefined;
+      const piecesPerUnit = parseInt(document.getElementById("new-p-piecesperunit").value, 10) || undefined;
+
+      if (!label || !key) { alert("请填写商品名称和 ID"); return; }
+
+      const entry = { label, category, unit, active: true };
+      if (weighMode) entry.weighMode = weighMode;
+      if (gramsPerUnit) entry.gramsPerUnit = gramsPerUnit;
+      if (piecesPerUnit) entry.piecesPerUnit = piecesPerUnit;
+
+      // Lives only in this session's round state (D30) — writing it back
+      // into product-catalog.json for future rounds stays a manual step.
+      customProducts[key] = entry;
+      selected.add(key);
+      roundPrices[key] = price;
+
+      closeNewProductModal();
+      updateSelectedCount();
+      renderCategoryTabs();
+      renderAdminCatalog();
+    }
+    window.saveNewProduct = saveNewProduct;
+
+    // ============================================================
+    // Tab + init-modal wiring
+    // ============================================================
+    let openRound = null;          // the currently-published round, or null
+    let currentOrders = [];        // raw docs from subscribeOrders
+    let adminUser = null;
+    let unsubscribeOrders = null;
+
+    function startNewRoundFlow() {
+      document.getElementById("init-modal").classList.add("hidden");
+    }
+    window.startNewRoundFlow = startNewRoundFlow;
+
+    function reviewCurrentRoundFlow() {
+      document.getElementById("init-modal").classList.add("hidden");
+      switchAdminTab("orders");
+    }
+    window.reviewCurrentRoundFlow = reviewCurrentRoundFlow;
+
+    function switchAdminTab(tab) {
+      const catalogTab = document.getElementById("section-catalog");
+      const ordersTab = document.getElementById("section-orders");
+      const catalogBtn = document.getElementById("tab-btn-catalog");
+      const ordersBtn = document.getElementById("tab-btn-orders");
+      if (tab === "catalog") {
+        catalogTab.classList.remove("hidden");
+        ordersTab.classList.add("hidden");
+        catalogBtn.className = "flex-1 py-2 rounded-lg bg-white text-emerald-700 shadow-sm transition-all text-center font-semibold";
+        ordersBtn.className = "flex-1 py-2 rounded-lg transition-all text-center text-slate-600";
+      } else {
+        catalogTab.classList.add("hidden");
+        ordersTab.classList.remove("hidden");
+        catalogBtn.className = "flex-1 py-2 rounded-lg transition-all text-center text-slate-600";
+        ordersBtn.className = "flex-1 py-2 rounded-lg bg-white text-emerald-700 shadow-sm transition-all text-center font-semibold";
+        ensureOrdersSubscription();
+      }
+    }
+    window.switchAdminTab = switchAdminTab;
+
+    // §8.3 — reads are admin-only. Sign in once before subscribing so the
+    // rules have something to check when USE_FIRESTORE is eventually true.
+    async function ensureOrdersSubscription() {
+      if (!adminUser) {
+        try { adminUser = await store.signInAdmin(); }
+        catch (e) {
+          console.error("管理员登录失败：", e);
+          document.getElementById("orders-signin-prompt").classList.remove("hidden");
+          return;
+        }
+      }
+      document.getElementById("orders-signin-prompt").classList.add("hidden");
+      if (unsubscribeOrders || !openRound) return;
+      unsubscribeOrders = store.subscribeOrders(openRound.date, orders => {
+        currentOrders = orders;
+        renderOrdersTab();
+      }, err => console.error("订单读取出错：", err));
+    }
+
+    function memberKeyOf(name) {
+      return name.trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    // D75: group by memberKey, take the LATEST submission, never sum. A
+    // member who resubmits {beef:2} after {beef:1} wants 2, not 3 — summing
+    // would silently double their bill.
+    function groupOrdersByMember(orders) {
+      const groups = new Map(); // memberKey -> { all: [...sorted by submittedAt], }
+      for (const o of orders) {
+        const mk = o.memberKey || memberKeyOf(o.name);
+        if (!groups.has(mk)) groups.set(mk, []);
+        groups.get(mk).push(o);
+      }
+      const result = [];
+      for (const [mk, list] of groups) {
+        list.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+        result.push({
+          memberKey: mk,
+          latest: list[list.length - 1],
+          superseded: list.slice(0, -1),
+          earliestSubmittedAt: list[0].submittedAt,
+        });
+      }
+      // Sort by each member's EARLIEST submission — 接龙 order (D75). A
+      // member who resubmits keeps their original queue position.
+      result.sort((a, b) => a.earliestSubmittedAt.localeCompare(b.earliestSubmittedAt));
+      return result;
+    }
+
+    function renderOrdersTab() {
+      const groups = groupOrdersByMember(currentOrders);
+      const container = document.getElementById("orders-list-container");
+
+      let totalVal = 0;
+      container.innerHTML = groups.map((g, idx) => {
+        const order = g.latest;
+        let subtotal = 0;
+        let itemsHtml = "";
+
+        for (const [key, qty] of Object.entries(order.items)) {
+          const info = openRound && openRound.products[key];
+          if (!info) continue;
+          const lineTotal = info.price * qty;
+          subtotal += lineTotal;
+
+          // D32/D33: totals from pricesAtOrder, drift badge if it moved —
+          // never silently restate what a member already agreed to pay.
+          const pricedAt = order.pricesAtOrder ? order.pricesAtOrder[key] : info.price;
+          const drifted = pricedAt !== undefined && pricedAt !== info.price;
+          const driftBadge = drifted
+            ? `<span class="text-[9px] text-amber-600">原价 $${Number(pricedAt).toFixed(2)} → 现价 $${Number(info.price).toFixed(2)}</span>`
+            : "";
+
+          itemsHtml += `
+            <div class="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-0">
+              <span class="text-slate-700">${emojiLabel(info)}</span>
+              <div class="flex items-center gap-2">
+                <button onclick="adjustOrderItemQty('${order.id}', '${key}', -1)" class="w-4 h-4 bg-slate-100 text-slate-600 rounded flex items-center justify-center text-[10px] font-bold">-</button>
+                <span class="text-slate-400">x${qty}</span>
+                <button onclick="adjustOrderItemQty('${order.id}', '${key}', 1)" class="w-4 h-4 bg-slate-100 text-slate-600 rounded flex items-center justify-center text-[10px] font-bold">+</button>
+                <div class="flex flex-col items-end">
+                  <span class="font-semibold text-slate-700">$${lineTotal.toFixed(2)}</span>
+                  ${driftBadge}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        totalVal += subtotal;
+
+        const dupeBadge = g.superseded.length > 0
+          ? `<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">该成员提交了 ${g.superseded.length + 1} 次 · 已采用最新一次</span>`
+          : "";
+        const supersededHtml = g.superseded.map(s => `
+          <div class="flex items-center justify-between text-[10px] text-slate-400 py-1 border-t border-dashed border-slate-100">
+            <span>较早提交 · ${s.submittedAt}</span>
+            <div class="flex items-center gap-2">
+              <button onclick="promoteSupersededOrder('${s.id}')" class="text-sky-600 underline">采用此次</button>
+              <button onclick="deleteSupersededOrder('${s.id}')" class="text-red-500 underline">删除</button>
+            </div>
+          </div>
+        `).join("");
+
+        return `
+          <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <span>${idx + 1}.</span>
+                <span>${order.name}</span>
+                ${dupeBadge}
+              </div>
+              <span class="text-xs font-bold text-emerald-600">$${subtotal.toFixed(2)}</span>
+            </div>
+            <div class="space-y-0.5">${itemsHtml}</div>
+            ${supersededHtml}
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("stat-people-count").innerText = `${groups.length} 人`;
+      document.getElementById("stat-total-amount").innerText = `$${totalVal.toFixed(2)}`;
+      document.getElementById("live-order-count").innerText = groups.length;
+    }
+
+    async function deleteSupersededOrder(orderId) {
+      if (!openRound) return;
+      await store.deleteOrder(openRound.date, orderId);
+    }
+    window.deleteSupersededOrder = deleteSupersededOrder;
+
+    // D34: inline +/- on the LATEST submission only — editing a superseded
+    // one would be invisible in the export (buildExport only reads latest).
+    async function adjustOrderItemQty(orderId, itemKey, delta) {
+      if (!openRound) return;
+      const order = currentOrders.find(o => o.id === orderId);
+      if (!order) return;
+      const nextQty = (order.items[itemKey] || 0) + delta;
+      await store.updateOrderItem(openRound.date, orderId, itemKey, nextQty);
+    }
+    window.adjustOrderItemQty = adjustOrderItemQty;
+
+    // "Promote" = delete every OTHER submission from this member, leaving
+    // the chosen one as the (now only, hence latest) entry.
+    async function promoteSupersededOrder(orderId) {
+      if (!openRound) return;
+      const chosen = currentOrders.find(o => o.id === orderId);
+      if (!chosen) return;
+      const mk = chosen.memberKey || memberKeyOf(chosen.name);
+      const siblings = currentOrders.filter(o => (o.memberKey || memberKeyOf(o.name)) === mk && o.id !== orderId);
+      for (const s of siblings) await store.deleteOrder(openRound.date, s.id);
+    }
+    window.promoteSupersededOrder = promoteSupersededOrder;
+
+    // ============================================================
+    // Sticky footer — publish/update (D16, D26-D28)
+    // ============================================================
+    function updateHeaderStatus() {
+      const badge = document.getElementById("round-status-badge");
+      const titleDisplay = document.getElementById("round-title-display");
+      const reviewBtn = document.getElementById("review-round-btn");
+      const reviewNote = document.getElementById("review-round-disabled-note");
+
+      if (openRound && openRound.status === "open") {
+        badge.innerText = "进行中";
+        badge.className = "text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-normal";
+        titleDisplay.innerText = `当前期数: ${openRound.label || openRound.date} 团购`;
+        reviewBtn.disabled = false;
+        reviewNote.classList.add("hidden");
+      } else {
+        badge.innerText = "无进行中团购";
+        badge.className = "text-[10px] bg-slate-500/20 text-slate-400 border border-slate-500/30 px-2 py-0.5 rounded-full font-normal";
+        titleDisplay.innerText = "当前没有已上架的团购";
+        reviewBtn.disabled = true;
+        reviewNote.classList.remove("hidden");
+      }
+    }
+
+    function validateBeforePublish() {
+      const date = document.getElementById("round-date-input").value;
+      if (!date) return "请选择团购日期";
+      if (selected.size === 0) return "请至少选择一项商品";
+
+      for (const key of selected) {
+        const price = roundPrices[key];
+        if (price === undefined || price === "" || Number.isNaN(price) || price <= 0) {
+          const label = allEntries()[key].label;
+          return `「${label}」缺少本期价格，请填写后再上架 (D28)`;
+        }
+      }
+      return null;
+    }
+
+    async function publishOrUpdateRound() {
+      const err = validateBeforePublish();
+      if (err) { alert(err); return; }
+
+      const date = document.getElementById("round-date-input").value;
+      const label = document.getElementById("round-label-input").value.trim() || labelFromDate(date);
+      const itemsLabel = document.getElementById("items-label-input").value.trim();
+
+      if (openRound && openRound.status === "open" && openRound.date !== date) {
+        const ok = confirm(`当前已有进行中的团购 (${openRound.label || openRound.date})。是否要用新的日期 ${date} 覆盖为当前团购？`);
+        if (!ok) return;
+      }
+
+      const products = {};
+      for (const key of selected) {
+        const entry = allEntries()[key];
+        const p = { label: entry.label, price: roundPrices[key], unit: entry.unit, category: entry.category };
+        // D10: pass these through when present; never invented.
+        if (entry.weighMode) p.weighMode = entry.weighMode;
+        if (entry.gramsPerUnit) p.gramsPerUnit = entry.gramsPerUnit;
+        if (entry.piecesPerUnit) p.piecesPerUnit = entry.piecesPerUnit;
+        products[key] = p;
+      }
+
+      const round = {
+        date, label, itemsLabel,
+        status: "open",
+        products,
+        publishedAt: new Date().toISOString(),
+        closedAt: null,
+      };
+
+      try {
+        await store.publishRound(round);
+      } catch (e) {
+        console.error("上架失败：", e);
+        alert("上架失败，请检查网络后重试");
+        return;
+      }
+
+      alert(`✅ 成功上架/更新 ${label} 团购！用户客户端现在将同步展示最新开启的商品。`);
+    }
+    window.publishOrUpdateRound = publishOrUpdateRound;
+
+    function labelFromDate(dateStr) {
+      const [, m, d] = dateStr.split("-").map(Number);
+      return `${m}/${d}`;
+    }
+
+    function todayLocalISO() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    // ============================================================
+    // §6.1 Close + export — the destructive-mistake surface (§1.6/D37-D43)
+    // ============================================================
+
+    // Matches data-<date>.json exactly (§2.3/D6-D12): no meta wrapper, no
+    // emoji, 盒 omitted, weighMode/gramsPerUnit/piecesPerUnit passed through
+    // only when present. Orders are latest-wins per member (D75), sorted by
+    // each member's EARLIEST submission (D39/D75) — never summed (D75).
+    function buildExport(round, orders) {
+      const products = {};
+      for (const [k, p] of Object.entries(round.products)) {
+        const o = { label: p.label, price: p.price };
+        if (p.unit && p.unit !== "盒") o.unit = p.unit;
+        if (p.weighMode)     o.weighMode     = p.weighMode;
+        if (p.gramsPerUnit)  o.gramsPerUnit  = p.gramsPerUnit;
+        if (p.piecesPerUnit) o.piecesPerUnit = p.piecesPerUnit;
+        products[k] = o;
+      }
+
+      const groups = groupOrdersByMember(orders); // already latest-wins, sorted
+
+      const out = { groupName: "WG团购群" };
+      if (round.itemsLabel) out.itemsLabel = round.itemsLabel;
+      out.products = products;
+      out.orders = groups.map(g => ({ name: g.latest.name, items: g.latest.items }));
+      return out;
+    }
+
+    // §1.6/D37-D40: manifest.json is CUMULATIVE — every round ever. Fetch
+    // the existing file, insert into it, emit the complete result. Never
+    // build one from scratch; never re-sort (the dashboard sorts at boot
+    // via isTestRound() — see dashboard.html and BUILD-PLAN §1.6).
+    function buildManifest(existing, date, label, file) {
+      const rounds = (existing.groupBuys || []).slice();
+      const entry = { date, label, file };
+      const at = rounds.findIndex(e => e.date === date);
+      if (at >= 0) rounds[at] = entry;   // re-export: replace in place
+      else rounds.unshift(entry);        // new round: prepend (cosmetic only)
+      return {
+        version: (Number(existing.version) || 0) + 1,
+        updatedAt: new Date().toISOString(),
+        groupBuys: rounds,
+      };
+    }
+
+    let exportState = { dataFilename: null, dataJSON: null, manifestFilename: null, manifestJSON: null, manifestAvailable: false };
+
+    async function closeAndExportRound() {
+      if (!openRound) { alert("目前没有进行中的团购可以截团"); return; }
+      if (!confirm("确定要截团吗？截团后将无法再提交新订单。")) return;
+
+      try {
+        await store.closeRound(openRound.date);
+      } catch (e) {
+        console.error("截团失败：", e);
+        alert("截团失败，请检查网络后重试");
+        return;
+      }
+      openRound.status = "closed";
+      updateHeaderStatus();
+
+      const date = openRound.date;
+      const file = `data-${date}.json`;
+      const dataJSON = buildExport(openRound, currentOrders);
+      exportState.dataFilename = file;
+      exportState.dataJSON = dataJSON;
+      document.getElementById("json-export-output").value = JSON.stringify(dataJSON, null, 2);
+
+      // D36: fetched at export time, not boot — shrinks the staleness
+      // window if someone else deployed a round while this tab sat open.
+      let manifestExisting = null;
+      try {
+        const res = await fetch(noCacheUrl(dataUrl("manifest.json")), NO_STORE);
+        if (res.ok) manifestExisting = await res.json();
+      } catch (e) {
+        console.error("manifest.json 读取失败：", e);
+      }
+
+      const manifestBlock = document.getElementById("manifest-degraded-warning");
+      const versionLine = document.getElementById("manifest-version-line");
+      const downloadBtn = document.getElementById("download-manifest-btn");
+      const copyBtn = document.getElementById("copy-manifest-btn");
+
+      if (manifestExisting && Array.isArray(manifestExisting.groupBuys)) {
+        const label = openRound.label || labelFromDate(date);
+        const nextManifest = buildManifest(manifestExisting, date, label, file);
+        exportState.manifestFilename = "manifest.json";
+        exportState.manifestJSON = nextManifest;
+        exportState.manifestAvailable = true;
+
+        document.getElementById("manifest-export-output").value = JSON.stringify(nextManifest, null, 2);
+        const prevVersion = Number(manifestExisting.version) || 0;
+        versionLine.innerText = `manifest.json · v${prevVersion} → v${nextManifest.version} · 共 ${nextManifest.groupBuys.length} 场团购`;
+        manifestBlock.classList.add("hidden");
+        downloadBtn.disabled = false;
+        copyBtn.disabled = false;
+      } else {
+        // D43: never emit a manifest built from an empty/partial fetch.
+        exportState.manifestAvailable = false;
+        versionLine.innerText = "manifest.json — 读取失败";
+        document.getElementById("manifest-export-output").value = "";
+        downloadBtn.disabled = true;
+        copyBtn.disabled = true;
+        manifestBlock.classList.remove("hidden");
+        const fallbackEntry = { date, label: openRound.label || labelFromDate(date), file };
+        document.getElementById("manifest-fallback-entry").innerText = JSON.stringify(fallbackEntry, null, 2);
+      }
+
+      document.getElementById("export-modal").classList.remove("hidden");
+    }
+    window.closeAndExportRound = closeAndExportRound;
+
+    function closeExportModal() { document.getElementById("export-modal").classList.add("hidden"); }
+    window.closeExportModal = closeExportModal;
+
+    function downloadJSON(filename, obj) {
+      const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadDataFile() {
+      if (!exportState.dataJSON) return;
+      downloadJSON(exportState.dataFilename, exportState.dataJSON);
+    }
+    window.downloadDataFile = downloadDataFile;
+
+    function downloadManifestFile() {
+      if (!exportState.manifestAvailable) return; // D43
+      downloadJSON(exportState.manifestFilename, exportState.manifestJSON);
+    }
+    window.downloadManifestFile = downloadManifestFile;
+
+    function downloadAllExportFiles() {
+      downloadDataFile();
+      if (exportState.manifestAvailable) {
+        setTimeout(downloadManifestFile, 300); // D41: browsers throttle rapid downloads
+      }
+    }
+    window.downloadAllExportFiles = downloadAllExportFiles;
+
+    function copyTextToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text);
+        return;
+      }
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+
+    function copyExportedJSON() {
+      copyTextToClipboard(document.getElementById("json-export-output").value);
+      alert("📋 JSON 数据已成功复制到剪贴板！");
+    }
+    window.copyExportedJSON = copyExportedJSON;
+
+    function copyExportedManifest() {
+      if (!exportState.manifestAvailable) return; // D43
+      copyTextToClipboard(document.getElementById("manifest-export-output").value);
+      alert("📋 manifest 数据已成功复制到剪贴板！");
+    }
+    window.copyExportedManifest = copyExportedManifest;
+
+    // ============================================================
+    // Boot
+    // ============================================================
+    // Bug fixed here: the label field used to be pre-filled with TODAY's
+    // label at boot, and the date-change listener only auto-updated the
+    // label when it was empty — so after that pre-fill, picking a
+    // different date silently left the stale label in place (reported:
+    // date changed to 9/19, manifest still got written with label 9/15).
+    // Fix: track whether the admin has actually typed into the label
+    // field themselves; auto-follow the date until they have.
+    let labelManuallyEdited = false;
+    const dateInput = document.getElementById("round-date-input");
+    const labelInput = document.getElementById("round-label-input");
+
+    dateInput.value = todayLocalISO();
+    labelInput.value = labelFromDate(todayLocalISO());
+
+    dateInput.addEventListener("change", e => {
+      if (!labelManuallyEdited) labelInput.value = labelFromDate(e.target.value);
+    });
+    labelInput.addEventListener("input", () => { labelManuallyEdited = true; });
+    wireSearchInput();
+
+    await Promise.all([loadCatalog(), loadEmojiMap()]);
+    renderCategoryTabs();
+    renderAdminCatalog();
+    updateSelectedCount();
+
+    store.subscribeRound(null, round => {
+      openRound = round;
+      updateHeaderStatus();
+      if (round && round.status === "open") ensureOrdersSubscription();
+    }, err => console.error("加载团购信息出错：", err));
+  </script>
+</body>
+</html>

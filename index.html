@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>社区团购接龙下单</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased pb-28">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 bg-emerald-600 text-white p-4 shadow-md">
+    <h1 class="text-lg font-bold" id="round-title">本期团购接龙</h1>
+    <p class="text-xs text-emerald-100 mt-1" id="round-subtitle">选购商品后点击提交，自动生成并复制接龙文本</p>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- Empty state: no open round -->
+    <section id="empty-state" class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 text-center hidden">
+      <div class="text-3xl mb-2">🛒</div>
+      <p class="text-sm font-semibold text-slate-700">目前没有正在进行的团购</p>
+      <p class="text-xs text-slate-400 mt-1">请等待管理员开启新一期接龙</p>
+    </section>
+
+    <!-- Ordering UI -->
+    <div id="ordering-ui" class="space-y-4 hidden">
+
+      <!-- User Input Section -->
+      <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <label class="block text-sm font-semibold text-slate-700 mb-1">微信昵称 <span class="text-red-500">*</span></label>
+        <input type="text" id="username" placeholder="请输入你的微信昵称" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+        <p class="text-[11px] text-amber-600 mt-2">⚠️ 重新提交将覆盖你之前的订单，请填写完整订单内容</p>
+      </section>
+
+      <!-- Category Tabs -->
+      <nav class="flex gap-2 overflow-x-auto pb-1 text-sm no-scrollbar" id="category-tabs"></nav>
+
+      <!-- Product List -->
+      <section id="product-list" class="space-y-3"></section>
+
+    </div>
+
+  </main>
+
+  <!-- Sticky Bottom Cart & Checkout Bar -->
+  <div id="cart-bar" class="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 p-4 shadow-lg hidden">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div>
+        <div class="text-xs text-slate-500">预估小计</div>
+        <div class="text-xl font-bold text-emerald-600" id="total-price">$0.00</div>
+      </div>
+      <button onclick="submitOrder()" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow border border-transparent text-sm transition-all">
+        提交并复制接龙
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Modal -->
+  <div id="toast" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl transform transition-all">
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-xl font-bold">✓</div>
+      <h3 class="font-bold text-slate-800 text-base mb-1">提交成功！</h3>
+      <p class="text-xs text-slate-500 mb-4" id="toast-body">接龙文本已复制到剪贴板，请返回微信群聊天框直接粘贴即可。</p>
+      <button onclick="closeToast()" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-sm font-semibold">我知道了</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // ============================================================
+    // §5.1 Cache busting — mandatory house rule (BUILD-PLAN §5.1 / D17)
+    // GitHub Pages serves data files with a max-age header, so a returning
+    // tab can silently re-serve a stale copy. Belt and braces: a unique
+    // ?v= query param AND cache: "no-store" on every static JSON fetch.
+    // ============================================================
+    const BOOT_TS = Date.now();
+    function noCacheUrl(url) {
+      return url + (url.indexOf("?") === -1 ? "?" : "&") + "v=" + BOOT_TS;
+    }
+    const NO_STORE = { cache: "no-store" };
+
+    // ============================================================
+    // §5.2 Categories (D19)
+    // ============================================================
+    const CATEGORIES = [
+      { key: "all",     label: "全部"     },
+      { key: "Produce", label: "生鲜果蔬" },
+      { key: "Meats",   label: "肉类"     },
+      { key: "Frozen",  label: "冷冻速食" },
+      { key: "Pantry",  label: "杂货"     },
+      { key: "Gifts",   label: "赠品"     },
+    ];
+
+    // ============================================================
+    // §1.3 Emoji is derived, never stored (D18)
+    // ============================================================
+    let EMOJI_MAP = { defaultEmoji: "🛒", categories: [] };
+    async function loadEmojiMap() {
+      try {
+        const res = await fetch(noCacheUrl("./product-emoji-map.json"), NO_STORE);
+        if (res.ok) EMOJI_MAP = await res.json();
+      } catch (e) {
+        console.error("product-emoji-map.json 读取失败，使用默认图标", e);
+      }
+    }
+    // Port verbatim from dashboard.html:1176-1189 — categories order is
+    // load-bearing (specific keywords before general ones), never re-sort.
+    function productEmoji(label) {
+      const cats = EMOJI_MAP.categories || [];
+      for (const cat of cats) {
+        if ((cat.keywords || []).some(kw => label.includes(kw))) return cat.emoji;
+      }
+      return EMOJI_MAP.defaultEmoji || "🛒";
+    }
+    function emojiLabel(info) {
+      return `${productEmoji(info.label)} ${info.label}`;
+    }
+
+    // ============================================================
+    // §5.3 Storage adapter — one interface, two implementations, one flag.
+    // USE_FIRESTORE stays false until the NEW Firebase project (D66/D73)
+    // exists and its config replaces the placeholder in firestoreStore().
+    // Do NOT substitute the wg-group-buy config here — see §8.1 (D67/D70).
+    // ============================================================
+    const USE_FIRESTORE = false;
+
+    const LS_OPEN_ROUND_KEY = "wggb:openRound";
+    function roundKey(date)  { return `wggb:round:${date}`; }
+    function ordersKey(date) { return `wggb:orders:${date}`; }
+
+    function readJSON(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) { return fallback; }
+    }
+    function writeJSON(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+    function genOrderId() {
+      return "o_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    }
+
+    // localStorage's native "storage" event does not fire in the tab that
+    // wrote the value (D21) — these registries let a write re-notify this
+    // tab's own listeners immediately, on top of the cross-tab event.
+    const roundListeners = [];
+    const orderListenersByDate = {};
+    function notifyRoundListeners()      { roundListeners.forEach(fn => fn()); }
+    function notifyOrderListeners(date)  { (orderListenersByDate[date] || []).forEach(fn => fn()); }
+
+    const localStore = {
+      async signInAdmin() { return { uid: "local-admin" }; },
+
+      async publishRound(round) {
+        writeJSON(roundKey(round.date), round);
+        localStorage.setItem(LS_OPEN_ROUND_KEY, round.date);
+        notifyRoundListeners();
+      },
+
+      async closeRound(date) {
+        const round = readJSON(roundKey(date), null);
+        if (!round) return;
+        round.status = "closed";
+        round.closedAt = new Date().toISOString();
+        writeJSON(roundKey(date), round);
+        notifyRoundListeners();
+      },
+
+      // date === null means "whatever round is currently open" (member cart).
+      subscribeRound(date, cb, onErr) {
+        function load() {
+          try {
+            const activeDate = date || localStorage.getItem(LS_OPEN_ROUND_KEY);
+            cb(activeDate ? readJSON(roundKey(activeDate), null) : null);
+          } catch (e) { onErr && onErr(e); }
+        }
+        load();
+        roundListeners.push(load);
+        function onStorage(e) {
+          if (!e.key || e.key === LS_OPEN_ROUND_KEY || e.key.startsWith("wggb:round:")) load();
+        }
+        window.addEventListener("storage", onStorage);
+        return () => {
+          window.removeEventListener("storage", onStorage);
+          const i = roundListeners.indexOf(load);
+          if (i >= 0) roundListeners.splice(i, 1);
+        };
+      },
+
+      subscribeOrders(date, cb, onErr) {
+        function load() {
+          try { cb(readJSON(ordersKey(date), [])); } catch (e) { onErr && onErr(e); }
+        }
+        load();
+        orderListenersByDate[date] = orderListenersByDate[date] || [];
+        orderListenersByDate[date].push(load);
+        function onStorage(e) {
+          if (!e.key || e.key === ordersKey(date)) load();
+        }
+        window.addEventListener("storage", onStorage);
+        return () => {
+          window.removeEventListener("storage", onStorage);
+          const arr = orderListenersByDate[date] || [];
+          const i = arr.indexOf(load);
+          if (i >= 0) arr.splice(i, 1);
+        };
+      },
+
+      // Members never resubmit-as-update (§8.3 / D75/D76) — always appends.
+      async submitOrder(date, payload) {
+        const orders = readJSON(ordersKey(date), []);
+        const doc = { id: genOrderId(), ...payload };
+        orders.push(doc);
+        writeJSON(ordersKey(date), orders);
+        notifyOrderListeners(date);
+        return doc.id;
+      },
+
+      async updateOrderItem(date, orderId, itemKey, qty) {
+        const orders = readJSON(ordersKey(date), []);
+        const o = orders.find(x => x.id === orderId);
+        if (!o) return;
+        if (qty <= 0) delete o.items[itemKey];
+        else o.items[itemKey] = qty;
+        writeJSON(ordersKey(date), orders);
+        notifyOrderListeners(date);
+      },
+
+      async deleteOrder(date, orderId) {
+        const orders = readJSON(ordersKey(date), []).filter(o => o.id !== orderId);
+        writeJSON(ordersKey(date), orders);
+        notifyOrderListeners(date);
+      },
+    };
+
+    // Written fully per §8.2/§8.3, left disconnected until D73/D79 land.
+    // Imported lazily so a local/dev session never hits the Firebase CDN
+    // for a store it isn't using.
+    async function createFirestoreStore() {
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js");
+      const { getAuth, signInWithEmailLink, isSignInWithEmailLink } =
+        await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js");
+      const { getFirestore, doc, collection, addDoc, updateDoc, deleteDoc,
+               onSnapshot, setDoc, query, orderBy } =
+        await import("https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js");
+
+      // NEW project — holds only `rounds` and `orders`. Safe to ship in a
+      // public page. Do NOT paste the wg-group-buy config here (§8.1/D67):
+      // that project holds payment data and the member directory, and its
+      // config must stay confined to admin/dashboard.html.
+      const firebaseConfig = {
+        apiKey:            "<new project — human supplies, see D73>",
+        authDomain:        "<new project>.firebaseapp.com",
+        projectId:         "<new project>",
+        storageBucket:     "<new project>.firebasestorage.app",
+        messagingSenderId: "<new project>",
+        appId:             "<new project>",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      return {
+        async signInAdmin() {
+          // Email-link sign-in (D74) — Google is blocked in WeChat's WebView.
+          // Full flow (send link, complete on redirect) intentionally left
+          // for whoever wires this up alongside D79.
+          throw new Error("firestoreStore.signInAdmin not wired yet — see D74/D79");
+        },
+        async publishRound(round) {
+          await setDoc(doc(db, "rounds", round.date), round);
+        },
+        async closeRound(date) {
+          await updateDoc(doc(db, "rounds", date), { status: "closed", closedAt: new Date().toISOString() });
+        },
+        subscribeRound(date, cb, onErr) {
+          if (date) {
+            return onSnapshot(doc(db, "rounds", date), snap => cb(snap.exists() ? snap.data() : null), err => {
+              console.error("rounds onSnapshot 出错：", err);
+              onErr && onErr(err);
+            });
+          }
+          // "whatever is open" has no single-doc query without an extra
+          // index; the admin always knows its own date, so this path is
+          // only exercised by the member cart against a known open date
+          // resolved elsewhere. Left explicit rather than silently guessing.
+          throw new Error("firestoreStore.subscribeRound(null, ...) needs an 'open round' pointer doc — not designed yet");
+        },
+        subscribeOrders(date, cb, onErr) {
+          // No precedent in dashboard.html for a collection-level listener —
+          // this is the one call flagged in BUILD-PLAN §5.3 as most likely
+          // to need debugging when the flag is first flipped.
+          const q = query(collection(db, "rounds", date, "orders"), orderBy("submittedAt", "asc"));
+          return onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))), err => {
+            console.error("orders onSnapshot 出错：", err);
+            onErr && onErr(err);
+          });
+        },
+        async submitOrder(date, payload) {
+          const ref = await addDoc(collection(db, "rounds", date, "orders"), payload);
+          return ref.id;
+        },
+        async updateOrderItem(date, orderId, itemKey, qty) {
+          const ref = doc(db, "rounds", date, "orders", orderId);
+          const field = `items.${itemKey}`;
+          await updateDoc(ref, qty > 0 ? { [field]: qty } : { [field]: undefined });
+        },
+        async deleteOrder(date, orderId) {
+          await deleteDoc(doc(db, "rounds", date, "orders", orderId));
+        },
+      };
+    }
+
+    const store = USE_FIRESTORE ? await createFirestoreStore() : localStore;
+
+    // ============================================================
+    // Member cart state + rendering
+    // ============================================================
+    let currentRound = null;   // the published round doc, or null
+    let cart = {};              // itemKey -> qty
+    let activeCategory = "all";
+
+    function presentCategories() {
+      if (!currentRound) return [];
+      const seen = new Set();
+      Object.values(currentRound.products).forEach(p => seen.add(p.category));
+      return CATEGORIES.filter(c => c.key === "all" || seen.has(c.key));
+    }
+
+    function renderCategoryTabs() {
+      const nav = document.getElementById("category-tabs");
+      const cats = presentCategories();
+      nav.innerHTML = cats.map(c => `
+        <button onclick="setActiveCategory('${c.key}')"
+          class="cat-btn ${c.key === activeCategory ? "active bg-emerald-600 text-white shadow-sm" : "bg-white text-slate-600 border border-slate-200"} px-4 py-1.5 rounded-full whitespace-nowrap text-xs font-medium"
+          data-cat="${c.key}">${c.label}</button>
+      `).join("");
+    }
+
+    function setActiveCategory(key) {
+      activeCategory = key;
+      renderCategoryTabs();
+      renderProductList();
+    }
+    window.setActiveCategory = setActiveCategory;
+
+    function renderProductList() {
+      const container = document.getElementById("product-list");
+      if (!currentRound) { container.innerHTML = ""; return; }
+      const entries = Object.entries(currentRound.products)
+        .filter(([, p]) => activeCategory === "all" || p.category === activeCategory);
+
+      container.innerHTML = entries.map(([key, p]) => {
+        const qty = cart[key] || 0;
+        const unit = p.unit || "盒";
+        const badge = p.weighMode === "weight" ? '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-normal">称重</span>'
+                    : p.weighMode === "proportional" ? '<span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-normal">分箱</span>'
+                    : "";
+        return `
+          <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+            <div class="pr-2">
+              <div class="flex items-center gap-1.5 font-medium text-slate-800 text-sm">
+                <span>${emojiLabel(p)}</span>
+                ${badge}
+              </div>
+              <div class="text-emerald-600 font-bold text-sm mt-1">$${Number(p.price).toFixed(2)} <span class="text-xs text-slate-400 font-normal">/${unit}</span></div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${qty > 0 ? `
+                <button onclick="updateQty('${key}', -1)" class="w-7 h-7 bg-slate-100 text-slate-600 rounded-full font-bold flex items-center justify-center text-base hover:bg-slate-200">-</button>
+                <span class="text-sm font-semibold w-5 text-center">${qty}</span>
+              ` : ""}
+              <button onclick="updateQty('${key}', 1)" class="w-7 h-7 bg-emerald-600 text-white rounded-full font-bold flex items-center justify-center text-base hover:bg-emerald-700">+</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function updateQty(key, delta) {
+      const next = (cart[key] || 0) + delta;
+      if (next <= 0) delete cart[key];
+      else cart[key] = next;
+      renderProductList();
+      renderCartBar();
+    }
+    window.updateQty = updateQty;
+
+    function cartTotal() {
+      let total = 0;
+      for (const [key, qty] of Object.entries(cart)) {
+        const p = currentRound && currentRound.products[key];
+        if (p) total += p.price * qty;
+      }
+      return total;
+    }
+
+    function renderCartBar() {
+      const bar = document.getElementById("cart-bar");
+      const hasItems = Object.keys(cart).length > 0;
+      bar.classList.toggle("hidden", !currentRound || currentRound.status !== "open");
+      document.getElementById("total-price").innerText = `$${cartTotal().toFixed(2)}`;
+    }
+
+    function render() {
+      const isOpen = currentRound && currentRound.status === "open";
+      document.getElementById("empty-state").classList.toggle("hidden", isOpen);
+      document.getElementById("ordering-ui").classList.toggle("hidden", !isOpen);
+
+      if (isOpen) {
+        document.getElementById("round-title").innerText = `本期团购接龙 · ${currentRound.label || currentRound.date}`;
+        document.getElementById("round-subtitle").innerText = currentRound.itemsLabel
+          ? `本期到货：${currentRound.itemsLabel}`
+          : "选购商品后点击提交，自动生成并复制接龙文本";
+        renderCategoryTabs();
+        renderProductList();
+      }
+      renderCartBar();
+    }
+
+    function onRoundUpdate(round) {
+      // A round that just closed, or a brand new round, invalidates any cart
+      // the member had building — safer to reset than to let them submit
+      // against products/prices that are no longer the ones on screen.
+      if (!currentRound || !round || currentRound.date !== round.date) {
+        cart = {};
+      }
+      currentRound = round;
+      render();
+    }
+
+    function onRoundError(err) {
+      console.error("加载团购信息出错：", err);
+      currentRound = null;
+      render();
+    }
+
+    // ============================================================
+    // Submit
+    // ============================================================
+    function memberKeyOf(name) {
+      return name.trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    function buildJielongText(name, items, products) {
+      const lines = [`1. ${name}`];
+      for (const [key, qty] of Object.entries(items)) {
+        const p = products[key];
+        if (!p) continue;
+        const unit = p.unit || "盒";
+        let line = `${emojiLabel(p)} $${Number(p.price).toFixed(2)}/${unit}`;
+        if (p.weighMode) line += "，称重";
+        if (qty > 1) line += ` -要${qty}份`;
+        lines.push(line);
+      }
+      return lines.join("\n");
+    }
+
+    function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text);
+        return;
+      }
+      // WeChat's in-app WebView is not always a secure context — fallback
+      // required, not optional (D49).
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    }
+
+    async function submitOrder() {
+      if (!currentRound || currentRound.status !== "open") {
+        alert("本期团购已截团，暂无法提交");
+        return;
+      }
+      const nameInput = document.getElementById("username");
+      const name = nameInput.value.trim();
+      if (!name) { alert("请输入您的微信昵称"); return; }
+      if (Object.keys(cart).length === 0) { alert("请至少选择一件商品"); return; }
+
+      const items = { ...cart };
+      const pricesAtOrder = {};
+      for (const key of Object.keys(items)) {
+        pricesAtOrder[key] = currentRound.products[key].price;
+      }
+
+      const payload = {
+        name,
+        memberKey: memberKeyOf(name),
+        items,
+        pricesAtOrder,
+        submittedAt: new Date().toISOString(),
+      };
+
+      try {
+        await store.submitOrder(currentRound.date, payload);
+      } catch (e) {
+        console.error("订单提交失败：", e);
+        alert("提交失败，请检查网络后重试");
+        return;
+      }
+
+      copyToClipboard(buildJielongText(name, items, currentRound.products));
+      document.getElementById("toast").classList.remove("hidden");
+    }
+    window.submitOrder = submitOrder;
+
+    function closeToast() { document.getElementById("toast").classList.add("hidden"); }
+    window.closeToast = closeToast;
+
+    // ============================================================
+    // Boot
+    // ============================================================
+    await loadEmojiMap();
+    store.subscribeRound(null, onRoundUpdate, onRoundError);
+  </script>
+</body>
+</html>
