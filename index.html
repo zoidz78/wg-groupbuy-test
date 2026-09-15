@@ -450,6 +450,22 @@
       return name.trim().replace(/\s+/g, " ").toLowerCase();
     }
 
+    // Fixed: quantity used to be hidden whenever qty === 1 (` -要${qty}份`
+    // only fired for qty > 1), so a pasted 接龙 line for a single item gave
+    // no indication of how many/how much was ordered at all. Quantity is
+    // now always shown, formatted per item type:
+    //   - weighMode "proportional" (box-share): bare fraction, e.g. "0.5"
+    //   - unit "kg": quantity + kg concatenated, e.g. "0.5kg"
+    //   - everything else: count multiplier, e.g. "x1", "x3"
+    function formatQty(qty) {
+      return String(Math.round(qty * 100) / 100); // trims float artifacts, e.g. 0.30000000000000004
+    }
+    function qtyTail(p, qty) {
+      if (p.weighMode === "proportional") return formatQty(qty);
+      if (p.unit === "kg") return `${formatQty(qty)}kg`;
+      return `x${formatQty(qty)}`;
+    }
+
     function buildJielongText(name, items, products) {
       const lines = [`1. ${name}`];
       for (const [key, qty] of Object.entries(items)) {
@@ -457,8 +473,11 @@
         if (!p) continue;
         const unit = p.unit || "盒";
         let line = `${emojiLabel(p)} $${Number(p.price).toFixed(2)}/${unit}`;
-        if (p.weighMode) line += "，称重";
-        if (qty > 1) line += ` -要${qty}份`;
+        // Tightened from `if (p.weighMode)` — that also matched
+        // "proportional" (box-share) items and mislabeled them as 称重,
+        // which the admin catalog itself treats as a distinct 分箱 badge.
+        if (p.weighMode === "weight") line += "，称重";
+        line += ` ${qtyTail(p, qty)}`;
         lines.push(line);
       }
       return lines.join("\n");

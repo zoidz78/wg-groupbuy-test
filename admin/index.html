@@ -122,6 +122,13 @@
         </div>
       </div>
 
+      <!-- Matches dashboard.html's existing 备货清单 (supplier order list)
+           feature and its "💬 复制..." button convention exactly, applied to
+           the LIVE round instead of a finalized data-<date>.json. -->
+      <button id="copy-stock-list-btn" onclick="copyStockList()" class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold py-2.5 rounded-xl text-xs transition-all shadow-sm">
+        💬 复制清单（下单用）
+      </button>
+
       <section class="space-y-3" id="orders-list-container"></section>
 
     </div>
@@ -1214,6 +1221,78 @@
       alert("📋 manifest 数据已成功复制到剪贴板！");
     }
     window.copyExportedManifest = copyExportedManifest;
+
+    // ============================================================
+    // 💬 复制清单（下单用）— mirrors dashboard.html's existing 备货清单
+    // (supplier order list) feature exactly: aggregate quantity per product
+    // across all orders, priced, with a per-unit grand total. Same house
+    // convention as copyStockListBtn/copyPaymentMsgBtn/copyReminderBtn there.
+    //
+    // Difference from the dashboard's version: that one reads a finalized
+    // data-<date>.json where every member already has exactly one entry.
+    // Ours reads LIVE orders, which can include a member's superseded
+    // resubmission — so this aggregates groupOrdersByMember()'s latest-only
+    // items, never the raw currentOrders array, or a resubmission would get
+    // double-counted into the supplier quantity.
+    //
+    // Also drops the dashboard's "待确认" (unverified price) branch: every
+    // product in round.products already passed D28's publish-time price
+    // validation, so there is no unverified-price case here.
+    // ============================================================
+    function formatQty(qty) {
+      return String(Math.round(qty * 100) / 100); // trims float artifacts, e.g. 0.30000000000000004
+    }
+    function unitOfKey(key) {
+      return (openRound && openRound.products[key] && openRound.products[key].unit) || "盒";
+    }
+    function unitTotals(itemsList) {
+      const totals = {};
+      itemsList.forEach(items => {
+        Object.entries(items).forEach(([key, qty]) => {
+          const u = unitOfKey(key);
+          totals[u] = (totals[u] || 0) + qty;
+        });
+      });
+      return totals;
+    }
+    function formatUnitTotals(totals) {
+      return Object.entries(totals).map(([u, qty]) => `${formatQty(qty)}${u}`).join(" + ");
+    }
+
+    function buildStockListOrderText() {
+      if (!openRound) return "";
+      const latestItemsList = groupOrdersByMember(currentOrders).map(g => g.latest.items);
+
+      const flavorTotals = {};
+      Object.keys(openRound.products).forEach(k => { flavorTotals[k] = 0; });
+      latestItemsList.forEach(items => Object.entries(items).forEach(([k, qty]) => {
+        if (flavorTotals[k] != null) flavorTotals[k] += qty;
+      }));
+
+      const lines = ["产品 · 数量 · 金额", ""];
+      let grandTotal = 0;
+      Object.entries(openRound.products).filter(([k]) => flavorTotals[k] > 0).forEach(([k, info]) => {
+        const unit = info.unit || "盒";
+        const amount = flavorTotals[k] * info.price;
+        grandTotal += amount;
+        lines.push(`${emojiLabel(info)} · $${Number(info.price).toFixed(2)}/${unit}`);
+        lines.push(`${formatQty(flavorTotals[k])}${unit} · $${amount.toFixed(2)}`);
+      });
+      lines.push("");
+      lines.push(`合计 · ${formatUnitTotals(unitTotals(latestItemsList))} · $${grandTotal.toFixed(2)}`);
+      return lines.join("\n");
+    }
+
+    function copyStockList() {
+      const text = buildStockListOrderText();
+      if (!text) { alert("目前没有进行中的团购可以生成清单"); return; }
+      copyTextToClipboard(text);
+      const btn = document.getElementById("copy-stock-list-btn");
+      const original = btn.innerText;
+      btn.innerText = "✅ 已复制";
+      setTimeout(() => { btn.innerText = original; }, 1500); // matches dashboard's 1500ms feedback
+    }
+    window.copyStockList = copyStockList;
 
     // ============================================================
     // Boot
