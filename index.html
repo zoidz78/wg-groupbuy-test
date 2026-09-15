@@ -327,6 +327,65 @@
     let currentRound = null;   // the published round doc, or null
     let cart = {};              // itemKey -> qty
     let activeCategory = "all";
+    let giftManagedKeys = new Set(); // cart keys currently driven by a linkedGift sync, not by the member directly
+
+    // ============================================================
+    // Linked-gift mechanism (generic — NOT hardcoded to any specific pair)
+    //
+    // A catalog product may carry `linkedGift: { key, ratio }` meaning: for
+    // every unit of THIS product a member orders, `ratio` units of the gift
+    // product get added automatically. This is catalog DATA, not code — the
+    // pairing (or its removal) is a product-catalog.json edit, because it is
+    // explicitly not durable: "not a given that the same gift will be there
+    // for that product in future and/or won't be tied to another product
+    // from the same supplier." Retiring, reassigning, or adding a new
+    // link needs zero code changes, only a catalog update.
+    //
+    // Pure function so it's testable and reusable — takes plain data in,
+    // returns plain data out, touches no DOM/module state itself.
+    // ============================================================
+    function computeLinkedGiftTotals(items, products) {
+      const totals = {};
+      for (const [key, qty] of Object.entries(items)) {
+        const p = products[key];
+        if (p && p.linkedGift && p.linkedGift.key) {
+          const giftKey = p.linkedGift.key;
+          const ratio = p.linkedGift.ratio || 1;
+          totals[giftKey] = (totals[giftKey] || 0) + qty * ratio;
+        }
+      }
+      return totals;
+    }
+
+    // A product that is SOMEONE ELSE's linkedGift target is never shown as
+    // its own browsable card — a member doesn't "order" a free gift
+    // directly, it's earned by ordering the linked product. Computed fresh
+    // from the round every time rather than cached, since which product
+    // links to what can change between rounds.
+    function giftTargetKeys(products) {
+      const targets = new Set();
+      for (const p of Object.values(products)) {
+        if (p.linkedGift && p.linkedGift.key) targets.add(p.linkedGift.key);
+      }
+      return targets;
+    }
+
+    // Recomputes every linked-gift quantity from the WHOLE cart (not just
+    // the item that just changed), so two different products linking to the
+    // same gift key in the same round sum correctly instead of one
+    // overwriting the other. Removes a previously-synced gift line the
+    // moment nothing in the cart still earns it.
+    function syncLinkedGifts() {
+      if (!currentRound) return;
+      const totals = computeLinkedGiftTotals(cart, currentRound.products);
+      for (const key of giftManagedKeys) {
+        if (!(key in totals)) delete cart[key];
+      }
+      for (const [key, qty] of Object.entries(totals)) {
+        if (qty > 0) cart[key] = qty; else delete cart[key];
+      }
+      giftManagedKeys = new Set(Object.keys(totals));
+    }
 
     function presentCategories() {
       if (!currentRound) return [];
@@ -355,7 +414,9 @@
     function renderProductList() {
       const container = document.getElementById("product-list");
       if (!currentRound) { container.innerHTML = ""; return; }
+      const giftKeys = giftTargetKeys(currentRound.products);
       const entries = Object.entries(currentRound.products)
+        .filter(([key, p]) => !giftKeys.has(key)) // never a browsable card — earned, not ordered
         .filter(([, p]) => activeCategory === "all" || p.category === activeCategory);
 
       container.innerHTML = entries.map(([key, p]) => {
@@ -364,6 +425,9 @@
         const badge = p.weighMode === "weight" ? '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-normal">称重</span>'
                     : p.weighMode === "proportional" ? '<span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-normal">分箱</span>'
                     : "";
+        const giftNote = p.linkedGift && currentRound.products[p.linkedGift.key]
+          ? `<div class="text-[10px] text-amber-600 mt-0.5">🎁 每${p.linkedGift.ratio && p.linkedGift.ratio !== 1 ? p.linkedGift.ratio : ""}份加送 ${currentRound.products[p.linkedGift.key].label}</div>`
+          : "";
         return `
           <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
             <div class="pr-2">
@@ -372,6 +436,7 @@
                 ${badge}
               </div>
               <div class="text-emerald-600 font-bold text-sm mt-1">$${Number(p.price).toFixed(2)} <span class="text-xs text-slate-400 font-normal">/${unit}</span></div>
+              ${giftNote}
             </div>
             <div class="flex items-center gap-2">
               ${qty > 0 ? `
@@ -389,6 +454,7 @@
       const next = (cart[key] || 0) + delta;
       if (next <= 0) delete cart[key];
       else cart[key] = next;
+      syncLinkedGifts();
       renderProductList();
       renderCartBar();
     }
@@ -432,6 +498,7 @@
       // against products/prices that are no longer the ones on screen.
       if (!currentRound || !round || currentRound.date !== round.date) {
         cart = {};
+        giftManagedKeys = new Set();
       }
       currentRound = round;
       render();

@@ -122,11 +122,14 @@
         </div>
       </div>
 
-      <!-- Matches dashboard.html's existing 备货清单 (supplier order list)
-           feature and its "💬 复制..." button convention exactly, applied to
-           the LIVE round instead of a finalized data-<date>.json. -->
-      <button id="copy-stock-list-btn" onclick="copyStockList()" class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold py-2.5 rounded-xl text-xs transition-all shadow-sm">
-        💬 复制清单（下单用）
+      <!-- Compiles every current member's order into one long 接龙-style
+           message, same numbered "N. 姓名 / items" format members already
+           get on their own clipboard copy — so the group can paste it back
+           in to verify their order was captured correctly (catches an edit
+           that accidentally dropped a line). NOT the dashboard's aggregated
+           supplier order-quantity list — different purpose entirely. -->
+      <button id="copy-full-recap-btn" onclick="copyFullRecap()" class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold py-2.5 rounded-xl text-xs transition-all shadow-sm">
+        💬 复制完整接龙（核对用）
       </button>
 
       <section class="space-y-3" id="orders-list-container"></section>
@@ -523,9 +526,26 @@
       return hay.includes(q.toLowerCase());
     }
 
-    function categoryCounts() {
-      const counts = { all: 0 };
+    // A product that is SOMEONE ELSE's linkedGift target is never shown as
+    // its own browsable/selectable card in the catalog — it isn't something
+    // an admin picks independently, it rides along with its parent product
+    // automatically at publish time (see publishOrUpdateRound). The pairing
+    // is catalog data (`linkedGift: {key, ratio}` on the PARENT entry), not
+    // code, precisely because it is not durable across rounds — see the
+    // note on gift_insulated_bag / mooncake_maoshanwang in product-catalog.json.
+    function giftTargetKeys() {
+      const targets = new Set();
       for (const p of Object.values(allEntries())) {
+        if (p.linkedGift && p.linkedGift.key) targets.add(p.linkedGift.key);
+      }
+      return targets;
+    }
+
+    function categoryCounts() {
+      const giftKeys = giftTargetKeys();
+      const counts = { all: 0 };
+      for (const [key, p] of Object.entries(allEntries())) {
+        if (giftKeys.has(key)) continue;
         counts.all++;
         counts[p.category] = (counts[p.category] || 0) + 1;
       }
@@ -533,8 +553,10 @@
     }
 
     function filteredEntries() {
+      const giftKeys = giftTargetKeys();
       const entries = Object.entries(allEntries());
       return entries.filter(([key, p]) => {
+        if (giftKeys.has(key)) return false;
         if (p.active === false) return false;
         if (activeCategory !== "all" && p.category !== activeCategory) return false;
         if (onlySelected && !selected.has(key)) return false;
@@ -629,6 +651,10 @@
           : `<span class="text-red-500">无历史价格，需手动填写</span>`;
         const noteLine = p.note ? `<p class="text-[10px] text-slate-400 mt-1">📝 ${p.note}</p>` : "";
         const akaLine = p.aka && p.aka.length ? `<p class="text-[10px] text-slate-400">又称: ${p.aka.join("、")}</p>` : "";
+        const giftInfo = allEntries();
+        const giftLine = p.linkedGift && giftInfo[p.linkedGift.key]
+          ? `<p class="text-[10px] text-amber-600 mt-1">🎁 选中后自动附赠 ${giftInfo[p.linkedGift.key].label}${p.linkedGift.ratio && p.linkedGift.ratio !== 1 ? `（比例 ${p.linkedGift.ratio}）` : ""}</p>`
+          : "";
 
         return `
           <div class="bg-white p-3.5 rounded-xl shadow-sm border transition-all ${isSelected ? "border-slate-200" : "border-slate-100 opacity-60"}">
@@ -643,7 +669,7 @@
               </label>
             </div>
             <div class="text-[10px] text-slate-400 font-mono">${key} · ${lastInfo}</div>
-            ${akaLine}${noteLine}
+            ${akaLine}${noteLine}${giftLine}
             <div class="flex items-center justify-between gap-2 pt-2 mt-2 border-t border-slate-100 text-xs">
               <div class="text-slate-500">本期价格</div>
               <div class="flex items-center gap-1">
@@ -1015,7 +1041,38 @@
         if (entry.weighMode) p.weighMode = entry.weighMode;
         if (entry.gramsPerUnit) p.gramsPerUnit = entry.gramsPerUnit;
         if (entry.piecesPerUnit) p.piecesPerUnit = entry.piecesPerUnit;
+        // Carried through so the cart can compute linked-gift quantities
+        // live (index.html's computeLinkedGiftTotals) — dropped by
+        // buildExport()/buildFullJielongRecap(), which read gift lines as
+        // ordinary items already present in a member's own submission, not
+        // by re-deriving the link. See product-catalog.json's linkedGift
+        // field and the note on gift_insulated_bag for why this is data,
+        // not a hardcoded pairing.
+        if (entry.linkedGift) p.linkedGift = entry.linkedGift;
         products[key] = p;
+      }
+
+      // Auto-include every linked gift's own catalog entry, even though the
+      // admin never toggled it on directly — a member ordering the parent
+      // product has no other way to see the gift's label/price at all,
+      // since giftTargetKeys() hides it from the normal catalog picker.
+      // Priced straight from the catalog (never from roundPrices/selected),
+      // so a $0 gift never trips D28's "missing price" validation, which
+      // only ever looks at manually-selected keys.
+      for (const key of Object.keys(products)) {
+        const linked = allEntries()[key] && allEntries()[key].linkedGift;
+        if (!linked || products[linked.key]) continue;
+        const giftEntry = allEntries()[linked.key];
+        if (!giftEntry) {
+          console.warn(`linkedGift 指向的商品不存在于目录中: ${linked.key}（来自 ${key}）`);
+          continue;
+        }
+        products[linked.key] = {
+          label: giftEntry.label,
+          price: giftEntry.lastPrice !== undefined ? giftEntry.lastPrice : 0,
+          unit: giftEntry.unit,
+          category: giftEntry.category,
+        };
       }
 
       const round = {
@@ -1223,76 +1280,65 @@
     window.copyExportedManifest = copyExportedManifest;
 
     // ============================================================
-    // 💬 复制清单（下单用）— mirrors dashboard.html's existing 备货清单
-    // (supplier order list) feature exactly: aggregate quantity per product
-    // across all orders, priced, with a per-unit grand total. Same house
-    // convention as copyStockListBtn/copyPaymentMsgBtn/copyReminderBtn there.
+    // 💬 复制完整接龙（核对用）— compiles every current member's LATEST
+    // order into one long message, in the exact same numbered "N. 姓名"
+    // + per-item-line format the cart's own buildJielongText() produces on
+    // a member's clipboard copy (index.html) — duplicated here per D4
+    // rather than shared, so admin can re-paste a full recap into the group
+    // chat for members to verify against, e.g. after a correction, without
+    // it looking like a different message format than what they already
+    // recognize from their own submission.
     //
-    // Difference from the dashboard's version: that one reads a finalized
-    // data-<date>.json where every member already has exactly one entry.
-    // Ours reads LIVE orders, which can include a member's superseded
-    // resubmission — so this aggregates groupOrdersByMember()'s latest-only
-    // items, never the raw currentOrders array, or a resubmission would get
-    // double-counted into the supplier quantity.
+    // NOT the dashboard's aggregated supplier order-quantity list — that is
+    // a different feature this button used to (incorrectly) implement.
     //
-    // Also drops the dashboard's "待确认" (unverified price) branch: every
-    // product in round.products already passed D28's publish-time price
-    // validation, so there is no unverified-price case here.
+    // Uses groupOrdersByMember()'s latest-only items per member, so a
+    // superseded resubmission never appears twice in the recap.
     // ============================================================
     function formatQty(qty) {
       return String(Math.round(qty * 100) / 100); // trims float artifacts, e.g. 0.30000000000000004
     }
-    function unitOfKey(key) {
-      return (openRound && openRound.products[key] && openRound.products[key].unit) || "盒";
-    }
-    function unitTotals(itemsList) {
-      const totals = {};
-      itemsList.forEach(items => {
-        Object.entries(items).forEach(([key, qty]) => {
-          const u = unitOfKey(key);
-          totals[u] = (totals[u] || 0) + qty;
-        });
-      });
-      return totals;
-    }
-    function formatUnitTotals(totals) {
-      return Object.entries(totals).map(([u, qty]) => `${formatQty(qty)}${u}`).join(" + ");
+    // Duplicated verbatim from index.html's qtyTail (D4) — keep both in
+    // sync by hand if the tail format ever changes; not shared via a file
+    // so a flaky WeChat WebView never needs a second network round-trip.
+    function qtyTail(p, qty) {
+      if (p.weighMode === "proportional") return formatQty(qty);
+      if (p.unit === "kg") return `${formatQty(qty)}kg`;
+      return `x${formatQty(qty)}`;
     }
 
-    function buildStockListOrderText() {
+    function buildFullJielongRecap() {
       if (!openRound) return "";
-      const latestItemsList = groupOrdersByMember(currentOrders).map(g => g.latest.items);
+      const groups = groupOrdersByMember(currentOrders); // latest-wins, sorted by 接龙 (queue) order
+      if (groups.length === 0) return "";
 
-      const flavorTotals = {};
-      Object.keys(openRound.products).forEach(k => { flavorTotals[k] = 0; });
-      latestItemsList.forEach(items => Object.entries(items).forEach(([k, qty]) => {
-        if (flavorTotals[k] != null) flavorTotals[k] += qty;
-      }));
-
-      const lines = ["产品 · 数量 · 金额", ""];
-      let grandTotal = 0;
-      Object.entries(openRound.products).filter(([k]) => flavorTotals[k] > 0).forEach(([k, info]) => {
-        const unit = info.unit || "盒";
-        const amount = flavorTotals[k] * info.price;
-        grandTotal += amount;
-        lines.push(`${emojiLabel(info)} · $${Number(info.price).toFixed(2)}/${unit}`);
-        lines.push(`${formatQty(flavorTotals[k])}${unit} · $${amount.toFixed(2)}`);
+      const blocks = groups.map((g, idx) => {
+        const order = g.latest;
+        const lines = [`${idx + 1}. ${order.name}`];
+        for (const [key, qty] of Object.entries(order.items)) {
+          const info = openRound.products[key];
+          if (!info) continue;
+          const unit = info.unit || "盒";
+          let line = `${emojiLabel(info)} $${Number(info.price).toFixed(2)}/${unit}`;
+          if (info.weighMode === "weight") line += "，称重";
+          line += ` ${qtyTail(info, qty)}`;
+          lines.push(line);
+        }
+        return lines.join("\n");
       });
-      lines.push("");
-      lines.push(`合计 · ${formatUnitTotals(unitTotals(latestItemsList))} · $${grandTotal.toFixed(2)}`);
-      return lines.join("\n");
+      return blocks.join("\n\n");
     }
 
-    function copyStockList() {
-      const text = buildStockListOrderText();
-      if (!text) { alert("目前没有进行中的团购可以生成清单"); return; }
+    function copyFullRecap() {
+      const text = buildFullJielongRecap();
+      if (!text) { alert("目前没有可核对的订单"); return; }
       copyTextToClipboard(text);
-      const btn = document.getElementById("copy-stock-list-btn");
+      const btn = document.getElementById("copy-full-recap-btn");
       const original = btn.innerText;
       btn.innerText = "✅ 已复制";
       setTimeout(() => { btn.innerText = original; }, 1500); // matches dashboard's 1500ms feedback
     }
-    window.copyStockList = copyStockList;
+    window.copyFullRecap = copyFullRecap;
 
     // ============================================================
     // Boot

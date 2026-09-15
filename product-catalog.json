@@ -238,7 +238,7 @@
       "category": "Meats",
       "unit": "kg",
       "lastPrice": 13,
-      "lastRound": "2026-09-11",
+      "lastRound": "2026-09-17",
       "weighMode": "weight",
       "active": true
     },
@@ -862,8 +862,12 @@
       "category": "Frozen",
       "unit": "盒",
       "lastPrice": 30,
-      "lastRound": "2026-09-11",
-      "active": true
+      "lastRound": "2026-09-17",
+      "active": true,
+      "linkedGift": {
+        "key": "gift_insulated_bag",
+        "ratio": 1
+      }
     },
     "mush": {
       "label": "香菇鲜肉馄饨",
@@ -1567,6 +1571,26 @@
       "weighMode": "weight",
       "gramsPerUnit": 500,
       "note": "Added 2026-09-14 from 永樂水饺 vendor price list. A discounted/cosmetic-defect version of dumpling_cabbage_pork (500g pack at $5, vs. the regular 1kg pack at $12.9) — kept as its own key per project convention (different price/pack size, never overload an existing key). Does not qualify for the buy-1kg-get-a-snack promo (not a full 1kg pack, and already discounted). Not yet used in an actual dated round.",
+      "active": true
+    },
+    "beef_sirloin_teys_mb2": {
+      "label": "Chilled TEYS澳洲黑安格斯MB2西冷牛排(约200g/份)",
+      "category": "Meats",
+      "unit": "份",
+      "lastPrice": 12.5,
+      "lastRound": "2026-09-17",
+      "weighMode": "weight",
+      "gramsPerUnit": 200,
+      "note": "Added 2026-09-15 from a new WG团购群 steak+mooncake round for 2026-09-17 delivery. Pre-order item: order cutoff Tue 1pm, cut Wed, delivered Thu; each ~200g portion weighed and settled at delivery like beef_roll_fat/beef_patty_angus. Distinct from all existing beef_* keys — none match this TEYS/Angus MB2 sirloin cut.",
+      "active": true
+    },
+    "gift_insulated_bag": {
+      "label": "保温袋(月饼赠品)",
+      "category": "Gifts",
+      "unit": "个",
+      "lastPrice": 0,
+      "lastRound": "2026-09-17",
+      "note": "Added 2026-09-15. Free gift tied 1:1 to mooncake_maoshanwang boxes (this round's promo: '1盒配1个保温袋') — always add to an order's items at the same quantity as that order's mooncake_maoshanwang count, so it shows on the packing/payment card and staff know to include a bag. Distinct from gift_snack_random (that one is an occasional random freebie, not tied to a specific product's quantity).",
       "active": true
     }
   }
