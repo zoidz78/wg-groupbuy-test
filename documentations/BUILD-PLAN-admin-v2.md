@@ -20,12 +20,13 @@ touching.**
 **Built and working, in `wggrpbuy/`:**
 - `index.html` — member cart, fully built including custom-quantity ordering
   (half units, weight-in-grams, bunch/box-share fractions — see D80–D82,
-  added AFTER this plan was originally written) and the linked-gift
-  mechanism (D83).
+  added AFTER this plan was originally written), the linked-gift mechanism
+  (D83), and a remembered-cart mechanism (D87–D88) so a member's second visit
+  is additive instead of a blind overwrite — still no server read, see D87.
 - `admin/index.html` — control panel, fully built including the catalog
   screen, live orders, close+export, and the 💬 复制完整接龙（核对用） recap
   button (D84 — replaced an earlier, incorrect implementation).
-- `test/run-tests.js` — 54/54 passing, self-updating (extracts and tests the
+- `test/run-tests.js` — 58/58 passing, self-updating (extracts and tests the
   live source of both files above against the real catalog/manifest data in
   this folder). Run it: `node test/run-tests.js` from `wggrpbuy/`.
 - **BUG-1, a serious data-loss-adjacent bug, was found and fixed 2026-09-15**
@@ -68,7 +69,7 @@ that no session so far has been able to run a browser.
 Read this whole document before writing code. Sections 0–3 are context and hard
 constraints; sections 4–9 are the build.
 
-**Appendix A is a numbered register of all decisions (D1–D86), each pointing at
+**Appendix A is a numbered register of all decisions (D1–D88), each pointing at
 its section.** Cite those IDs when discussing changes — "change D23" is unambiguous,
 "change the error handling" is not. D57, D58, D60, D73 and D79 are still open and need the
 human. If you change a decision, update both the register row and the section it
@@ -1091,7 +1092,7 @@ Each step should leave the tree in a working state.
    project (D73) and email-link auth (D74/D79), neither exists yet.
 4. ✅ `admin/index.html` Tab 1 — catalog screen, search, filters, carry-over,
    pricing, new-product modal, publish validation. Also includes work done
-   AFTER this plan was written — see D80–D86 in Appendix A.
+   AFTER this plan was written — see D80–D88 in Appendix A.
 5. ✅ `index.html` — member cart reading the published round, submit, 接龙 text.
    Also extended post-plan — see D80–D82.
 6. ✅ `admin/index.html` Tab 2 — live orders, drift badges, close, then the
@@ -1281,8 +1282,8 @@ it points at, or they drift.
 |---|---|---|
 | D44 | ✅ Renders only the open round's products at that round's prices | 6.2 |
 | D45 | ✅ No open round, or closed ⇒ empty state, submit disabled | 6.2 |
-| D46 | ✅ **Dropped.** No lookup, no pre-fill — members have `create` only, no read. Do not reintroduce | 6.2 |
-| D47 | ✅ **Dropped.** Resubmitting creates a second document; the cart warns `重新提交将覆盖你之前的订单`. Admin reconciles latest-wins (D75) | 6.2 |
+| D46 | ✅ **Dropped, server-side, still true.** No SERVER lookup, no pre-fill from Firestore — members have `create` only, no read. Do not reintroduce a server read. **UX cost later mitigated by D87 via a client-only mechanism** — see that row before assuming this gap is unsolved. | 6.2 |
+| D47 | ✅ **Dropped, still true.** Resubmitting creates a second document; the cart warns `重新提交将覆盖你之前的订单`. Admin reconciles latest-wins (D75). **D87 reduces how often this warning matters in practice** by pre-filling the cart so a member's second visit is naturally additive instead of a blind overwrite — the server-side mechanics here are unchanged. | 6.2 |
 | D48 | ✅ `pricesAtOrder` snapshotted at submit; `firstSubmittedAt` preserved across resubmits | 6.2 |
 | D49 | ⚠️ **Superseded by D80–D82.** The literal format here is stale: 称重 suffix was removed entirely (client-facing decision, 2026-09-15), and the quantity tail was redesigned into `qtyTail()` (kg → bare "0.7kg", proportional → bare fraction, else → "x{qty}") to support D80's custom-quantity ordering. `execCommand` fallback is still accurate. | 6.2 |
 
@@ -1324,7 +1325,7 @@ it points at, or they drift.
 | D77 | ⚠️ **App-level enforcement exists** — `index.html`'s `submitOrder()` checks `currentRound.status === "open"` before allowing a submission. The RULES-level enforcement this row actually describes (`roundIsOpen()` as a Firestore security rule) is not deployed anywhere, since D69's rules file was never created. Do not treat the app-level check as equivalent — it only stops a normal user of the page, not anyone calling Firestore directly. | 8.3 |
 | D78 | ❌ Same status as D77 — this is a rules-file decision, and no rules file (D69) or Firebase project (D73) exists yet for it to apply to. `admin/index.html`'s `publishOrUpdateRound()` has no write restriction of its own; it relies entirely on the (not yet existing) rules. | 8.3 |
 
-### Post-plan additions (D80–D86) — built after this document was originally written
+### Post-plan additions (D80–D88) — built after this document was originally written
 
 These were never part of the original spec — they came from direct feedback
 after the first build was already coded and tested. Recorded here so the
@@ -1339,14 +1340,26 @@ decision register stays the complete, authoritative list.
 | D84 | ✅ **Admin's 💬 button corrected.** First build mistakenly reimplemented `dashboard.html`'s `buildStockListOrderText()` (aggregated supplier order-quantity list) under the `💬` house-style prefix. Effendy clarified the actual ask: compile every current member's LATEST order into one long message, in the exact numbered format members already see on their own clipboard copy, for pasting back into the group chat as a verification recap. Rebuilt as `buildFullJielongRecap()` / `💬 复制完整接龙（核对用）`. Still uses `groupOrdersByMember()`'s latest-wins output (a resubmission must never appear/count twice either way) — that part of the reasoning carried over even though the feature itself changed. | `admin/index.html` |
 | D85 | ✅ **BUG-1 fixed.** `selected`/`roundPrices` used to start blank on every admin page load regardless of an already-open round, so "adding a new product" and republishing silently REPLACED the whole round with just the newly-checked items — wiping every previously-published product, and blanking any member's order line for whatever disappeared (in the on-screen orders tab, the 💬 recap, AND the real `data-<date>.json` export — all three skip a line whose product no longer exists in `round.products`, rather than erroring). Fixed with `computeRehydrationFromRound()` (pure) + `rehydrateFromRound()` (DOM wrapper, restores date/label fields too, or "updating" would publish under today's date instead of the round's real date). Runs once per page load; `startNewRoundFlow()` explicitly overrides it since "start a new round" is a deliberate blank slate. Full writeup: `project-wggrpbuy-known-bugs.md` (Claude Code project memory). | `admin/index.html`: `computeRehydrationFromRound`, `rehydrateFromRound` |
 | D86 | ✅ **BUG-1b fixed (same day, ~30min after D85).** D85's `rehydrateFromRound()` sets `labelManuallyEdited = true` whenever it restores a real round's label — correct in isolation, but `startNewRoundFlow()` never reset that flag, so once ANY round had been seen in the page session, the date field silently stopped driving the label for the rest of the session — reproducing the ORIGINAL date/label bug through a new path. `startNewRoundFlow()` now resets `labelManuallyEdited = false` and re-seeds date/label/itemsLabel to fresh defaults. No new tests (same DOM/event-wiring class the harness can't reach). Full writeup: `project-wggrpbuy-known-bugs.md`. | `admin/index.html`: `startNewRoundFlow` |
+| D87 | ✅ **Remembered-cart mechanism.** Admin screenshots showed a real member submitting twice — once with 3 fruit items, once with 4 completely different items — and the SECOND submission silently replaced the first (correct per D46/D47's design), losing the fruit items because the cart had no memory of them. Effendy asked for a way to append rather than replace. Solution keeps D46/D47's server-side security model completely intact — **no server read added** — by reading back only what THIS BROWSER already wrote to its own `localStorage`, keyed by `wggb:memberCart:<roundDate>:<memberKey>`. On username blur, if a remembered cart exists for that name+round AND the current cart is still empty, it loads automatically with a visible banner ("已载入你上次提交的订单...") and the submit button relabels to `更新并复制接龙`. Confirmed with Effendy this correctly supports testing multiple pseudo-members from one device/browser, since the lookup is keyed by the typed name, not the device. | `index.html`: `loadRememberedCart`, `saveRememberedCart`, `onUsernameBlur`, `resetSubmitUiToDefault` |
+| D88 | ✅ **`filterCartToRoundProducts(cartItems, products)`** — pure function factoring out a defensive guard that both `submitOrder()` and D87's cart-restore now share: a cart key with no matching entry in the round's current `products` (e.g. the admin removed that product, or a remembered cart survived past that point) is silently dropped rather than crashing on `.price` of `undefined`. Always re-derives `pricesAtOrder` from the LIVE round at call time, never from anything baked into the cart itself. | `index.html` |
 
-**Confirmed independently, same day:** Firebase/Firestore would NOT have
-prevented D85/BUG-1. The defect was entirely in what the admin's client-side
-JS constructed before ever reaching storage — `firestoreStore.publishRound()`
-uses a full `setDoc()` with no `merge: true`, so it would have overwritten the
-round doc exactly the same way `localStorage` did. Not a reason to deprioritize
-the localStorage-vs-Firestore migration, just a note that it wouldn't have
-been a free fix for this specific bug.
+**On D87 specifically — this does not reopen D46/D47.** No new server permission
+was added; `orders` is still `create`-only with no read (§8.3). This mechanism
+only ever reads a member's own browser's own prior write. Its one real
+limitation: it does not follow a member across devices, browsers, or a cleared
+cache — same category of limitation as everything else built on
+`localStorage` here (D20/D21), and it goes away entirely once real accounts
+or a different identity mechanism exist. Not treated as a blocker for this
+build.
+
+**Confirmed independently, same day (2026-09-15):** Firebase/Firestore would
+NOT have prevented D85/BUG-1. The defect was entirely in what the admin's
+client-side JS constructed before ever reaching storage —
+`firestoreStore.publishRound()` uses a full `setDoc()` with no `merge: true`,
+so it would have overwritten the round doc exactly the same way `localStorage`
+did. Not a reason to deprioritize the localStorage-vs-Firestore migration,
+just a note that it wouldn't have been a free fix for this specific bug.
+
 
 ### Open — not decided, needs the human
 

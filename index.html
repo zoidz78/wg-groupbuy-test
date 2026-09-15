@@ -36,6 +36,7 @@
       <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <label class="block text-sm font-semibold text-slate-700 mb-1">微信昵称 <span class="text-red-500">*</span></label>
         <input type="text" id="username" placeholder="请输入你的微信昵称" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+        <p id="remembered-order-banner" class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1.5 mt-2 hidden"></p>
         <p class="text-[11px] text-amber-600 mt-2">⚠️ 重新提交将覆盖你之前的订单，请填写完整订单内容</p>
       </section>
 
@@ -56,7 +57,7 @@
         <div class="text-xs text-slate-500">预估小计</div>
         <div class="text-xl font-bold text-emerald-600" id="total-price">$0.00</div>
       </div>
-      <button onclick="submitOrder()" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow border border-transparent text-sm transition-all">
+      <button onclick="submitOrder()" id="submit-order-btn" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow border border-transparent text-sm transition-all">
         提交并复制接龙
       </button>
     </div>
@@ -604,6 +605,7 @@
       if (!currentRound || !round || currentRound.date !== round.date) {
         cart = {};
         giftManagedKeys = new Set();
+        resetSubmitUiToDefault(); // a remembered-order banner from the OLD round must not linger
       }
       currentRound = round;
       render();
@@ -620,6 +622,75 @@
     // ============================================================
     function memberKeyOf(name) {
       return name.trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    // ============================================================
+    // Remembered-cart mechanism — lets a member ADD to their order across
+    // separate visits without losing what they already submitted.
+    //
+    // Deliberately NOT a server read (D46/D47 stay dropped — members still
+    // have `create` only on orders, no read access, so one member can never
+    // fetch or tamper with another's submission). This only ever reads back
+    // what THIS SAME BROWSER already wrote to its own localStorage, keyed by
+    // round date + normalized name — so it works identically whether one
+    // person owns the device, or several people share it and each type
+    // their own name (as when testing several "members" from one phone).
+    //
+    // This is why D46/D47's UX cost (resubmitting silently replaces the
+    // whole order) kept causing real data loss (see the "该成员提交了 2 次"
+    // admin screenshots) — the cart never knew what a member had already
+    // ordered. This restores that convenience without reopening the
+    // security gap the read-access removal was for.
+    // ============================================================
+    function rememberedCartKey(roundDate, memberKey) {
+      return `wggb:memberCart:${roundDate}:${memberKey}`;
+    }
+    function loadRememberedCart(roundDate, memberKey) {
+      try {
+        const raw = localStorage.getItem(rememberedCartKey(roundDate, memberKey));
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+    function saveRememberedCart(roundDate, memberKey, items) {
+      try {
+        localStorage.setItem(rememberedCartKey(roundDate, memberKey), JSON.stringify({
+          items, submittedAt: new Date().toISOString(),
+        }));
+      } catch (e) {
+        console.error("无法保存本地订单记录（localStorage 不可用或已满）：", e);
+      }
+    }
+
+    function resetSubmitUiToDefault() {
+      document.getElementById("remembered-order-banner").classList.add("hidden");
+      document.getElementById("submit-order-btn").innerText = "提交并复制接龙";
+    }
+
+    // Only auto-loads into an EMPTY cart — if the member already tapped
+    // items before finishing typing their name, we never silently discard
+    // active selections just because a name match was found.
+    function onUsernameBlur() {
+      if (!currentRound) return;
+      const name = document.getElementById("username").value.trim();
+      if (!name) { resetSubmitUiToDefault(); return; }
+
+      const remembered = loadRememberedCart(currentRound.date, memberKeyOf(name));
+      if (!remembered || Object.keys(cart).length > 0) { resetSubmitUiToDefault(); return; }
+
+      // A product the admin has since removed from the round would otherwise
+      // linger in `cart` with nothing in currentRound.products to price it
+      // against — reuse the same filter submitOrder relies on.
+      cart = filterCartToRoundProducts(remembered.items, currentRound.products).items;
+      syncLinkedGifts();
+
+      const when = new Date(remembered.submittedAt).toLocaleString("zh-CN", { hour12: false });
+      const banner = document.getElementById("remembered-order-banner");
+      banner.innerText = `✅ 已载入你上次提交的订单（${when}），可直接修改后重新提交`;
+      banner.classList.remove("hidden");
+      document.getElementById("submit-order-btn").innerText = "更新并复制接龙";
+
+      renderProductList();
+      renderCartBar();
     }
 
     // Fixed: quantity used to be hidden whenever qty === 1 (` -要${qty}份`
@@ -669,6 +740,23 @@
       document.body.removeChild(textArea);
     }
 
+    // Pure — kept separate from the DOM-reading caller for the same reason
+    // as computeCustomQty: this determines what actually gets submitted and
+    // priced. A cart restored from localStorage (or one left open across a
+    // live admin edit) can reference a product the round no longer has;
+    // drop it rather than crashing on `.price` of undefined.
+    function filterCartToRoundProducts(cartItems, products) {
+      const items = {};
+      const pricesAtOrder = {};
+      for (const [key, qty] of Object.entries(cartItems)) {
+        const info = products[key];
+        if (!info) continue;
+        items[key] = qty;
+        pricesAtOrder[key] = info.price;
+      }
+      return { items, pricesAtOrder };
+    }
+
     async function submitOrder() {
       if (!currentRound || currentRound.status !== "open") {
         alert("本期团购已截团，暂无法提交");
@@ -679,15 +767,13 @@
       if (!name) { alert("请输入您的微信昵称"); return; }
       if (Object.keys(cart).length === 0) { alert("请至少选择一件商品"); return; }
 
-      const items = { ...cart };
-      const pricesAtOrder = {};
-      for (const key of Object.keys(items)) {
-        pricesAtOrder[key] = currentRound.products[key].price;
-      }
+      const { items, pricesAtOrder } = filterCartToRoundProducts(cart, currentRound.products);
+      if (Object.keys(items).length === 0) { alert("购物车中的商品已不在本期接龙内，请重新选择"); return; }
 
+      const memberKey = memberKeyOf(name);
       const payload = {
         name,
-        memberKey: memberKeyOf(name),
+        memberKey,
         items,
         pricesAtOrder,
         submittedAt: new Date().toISOString(),
@@ -701,6 +787,7 @@
         return;
       }
 
+      saveRememberedCart(currentRound.date, memberKey, items);
       copyToClipboard(buildJielongText(name, items, currentRound.products));
       document.getElementById("toast").classList.remove("hidden");
     }
@@ -712,6 +799,7 @@
     // ============================================================
     // Boot
     // ============================================================
+    document.getElementById("username").addEventListener("blur", onUsernameBlur);
     await loadEmojiMap();
     store.subscribeRound(null, onRoundUpdate, onRoundError);
   </script>

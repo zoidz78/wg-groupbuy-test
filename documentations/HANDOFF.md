@@ -35,10 +35,10 @@ anything else.**
 | | Status |
 |---|---|
 | Architecture | ✅ Decided |
-| Specification | ✅ Written and kept current (`BUILD-PLAN-admin-v2.md`, 86 numbered decisions) |
+| Specification | ✅ Written and kept current (`BUILD-PLAN-admin-v2.md`, 88 numbered decisions) |
 | Member cart (`index.html`) | ✅ Built, including custom-quantity ordering and the linked-gift mechanism (D80–D83) |
 | Admin panel (`admin/index.html`) | ✅ Built, including the 💬 verification-recap button (D84) |
-| Automated tests | ✅ 54/54 passing (`test/run-tests.js`, self-updating) |
+| Automated tests | ✅ 58/58 passing (`test/run-tests.js`, self-updating) |
 | **Real browser verification** | ❌ **Never done, by any session.** The environment these were built in cannot bind a local server. This is the single most important gap — see §7. |
 | A serious data-loss-adjacent bug (BUG-1 + BUG-1b) | ✅ Found and fixed same day (2026-09-15) | 
 | Dashboard relocation | ❌ Not done — see the open items below |
@@ -157,6 +157,15 @@ control panel groups them by name, shows the newest, and lets the organizer dele
 the stale one. The cart warns members that resubmitting **replaces** their previous
 order, so they know to re-enter everything.
 
+**Update 2026-09-15 (D87):** the "resubmitting replaces everything" cost above
+turned out to cause real data loss in practice — a member's second submission
+silently dropped their first order's items because the cart never showed them
+what they'd already ordered. Fixed WITHOUT touching this security model: the
+cart now remembers a member's last submission in that browser's own
+`localStorage` (keyed by round + name) and pre-fills on their next visit. No
+server read was added — it only ever reads back what that same browser
+already wrote.
+
 ---
 
 ## 5. Things that confuse everyone (including me, repeatedly)
@@ -189,7 +198,7 @@ from a separate parent planning folder). Read in this order.
 | `HANDOFF.md` | This file — orientation, now for CONTINUING work, not commissioning it | short |
 | `overview.md` | Architecture summary. **Stale** — still says `product-catalog.json` is "never deployed" (D56, never applied) | short |
 | `WeChat-GrpBuy-Frontend.md` | Original product requirements | medium |
-| **`BUILD-PLAN-admin-v2.md`** | **The spec, and the primary source of truth for status.** Has a "STATUS AS OF 2026-09-15" banner right at the top — read that before the rest. 86 numbered decisions (Appendix A), all marked ✅/⚠️/❌/🔲 for implementation status | long |
+| **`BUILD-PLAN-admin-v2.md`** | **The spec, and the primary source of truth for status.** Has a "STATUS AS OF 2026-09-15" banner right at the top — read that before the rest. 88 numbered decisions (Appendix A), all marked ✅/⚠️/❌/🔲 for implementation status | long |
 | `CLOUDFLARE-CUTOVER.md` | Hosting migration runbook, step by step. Not started | medium |
 | `wg-groupbuy-project-knowledge.md` | Dashboard's authoritative history and schema. **Wins over everything else when they disagree** | very long |
 | `secure.md` | A security proposal — partly adopted (create-only rules pattern), partly rejected (anonymous auth, D63) | short |
@@ -251,7 +260,7 @@ paths:
 | `../product-emoji-map.json` | Emoji lookup |
 | `../manifest.json` | Real data for the manifest-merge tests |
 | `../index.html`, `../admin/index.html` | **The actual current code** — read these before assuming anything needs building from scratch |
-| `../test/run-tests.js` | Run it. 54/54 should pass before any new change, and after |
+| `../test/run-tests.js` | Run it. 58/58 should pass before any new change, and after |
 
 **Do not give it:** `CLOUDFLARE-CUTOVER.md` (console work, an agent may try
 to implement it), `Product_Catalog_Updated.xlsx`, or any `.txt` duplicates.

@@ -56,7 +56,7 @@ eval(FN_NAMES.map(n => extractFunction(n, ADMIN_SRC)).join("\n\n"));
 // are pure functions taking plain data, no module-state closures needed.
 const CART_SRC = extractScript(fs.readFileSync(CART_HTML, "utf8"));
 eval(["computeLinkedGiftTotals", "giftTargetKeys", "gramsPerUnitFor", "roundGramsDown",
-      "unitOptionsFor", "computeCustomQty"].map(n => extractFunction(n, CART_SRC)).join("\n\n"));
+      "unitOptionsFor", "computeCustomQty", "filterCartToRoundProducts"].map(n => extractFunction(n, CART_SRC)).join("\n\n"));
 
 // ---- tiny runner ----------------------------------------------------------
 let pass = 0, fail = 0;
@@ -440,6 +440,35 @@ check("no product is reconstructed as custom if it already exists in the catalog
   };
   const result = computeRehydrationFromRound(round, CATALOG, {});
   assert.deepStrictEqual(result.newCustomProducts, {}, "both are real catalog products, neither should be reconstructed as custom");
+});
+
+console.log("\n--- filterCartToRoundProducts — the remembered-cart safety net ---");
+check("a product still in the round passes through with its current price", () => {
+  const products = { apple_envy: { label: "Envy苹果(5粒/份)", price: 10.5, unit: "份" } };
+  const { items, pricesAtOrder } = filterCartToRoundProducts({ apple_envy: 2 }, products);
+  assert.deepStrictEqual(items, { apple_envy: 2 });
+  assert.strictEqual(pricesAtOrder.apple_envy, 10.5);
+});
+check("a product the admin has since removed from the round is dropped, not crashed on", () => {
+  const products = { apple_envy: { label: "Envy苹果(5粒/份)", price: 10.5, unit: "份" } };
+  const cartWithStaleKey = { apple_envy: 1, discontinued_item: 3 };
+  const { items, pricesAtOrder } = filterCartToRoundProducts(cartWithStaleKey, products);
+  assert.deepStrictEqual(items, { apple_envy: 1 }, "the stale key must be silently dropped");
+  assert.ok(!("discontinued_item" in pricesAtOrder));
+});
+check("a cart made entirely of since-removed products yields empty, not a crash", () => {
+  const { items, pricesAtOrder } = filterCartToRoundProducts({ gone: 1 }, {});
+  assert.deepStrictEqual(items, {});
+  assert.deepStrictEqual(pricesAtOrder, {});
+});
+check("price reflects the CURRENT round price, not any price baked into the cart itself", () => {
+  // filterCartToRoundProducts always re-derives pricesAtOrder from the live
+  // round at the moment of call — this is what makes it safe to reuse for
+  // both a fresh submit (D48: pricesAtOrder snapshotted at submit) and a
+  // remembered-cart restore (price may have moved since the last submit).
+  const products = { box_item: { label: "普通盒装商品", price: 6, unit: "盒" } };
+  const { pricesAtOrder } = filterCartToRoundProducts({ box_item: 1 }, products);
+  assert.strictEqual(pricesAtOrder.box_item, 6);
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);
