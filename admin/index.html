@@ -880,6 +880,22 @@
       selected = new Set();
       roundPrices = {};
       hasRehydratedFromRound = true;
+
+      // Bug fixed here (resurfaced 2026-09-15, reported via screenshot):
+      // rehydrateFromRound() sets labelManuallyEdited = true whenever it
+      // restores a REAL round's label (correctly — so a later date tweak
+      // doesn't overwrite it). But that flag was never reset when starting
+      // a genuinely NEW round afterward, so once any round had been seen
+      // this page session, the date field silently stopped driving the
+      // label for the rest of the session — reproducing the exact original
+      // date/label bug through a different trigger. Reset both the flag
+      // and the fields to fresh defaults here, same as boot.
+      labelManuallyEdited = false;
+      const freshDate = todayLocalISO();
+      document.getElementById("round-date-input").value = freshDate;
+      document.getElementById("round-label-input").value = labelFromDate(freshDate);
+      document.getElementById("items-label-input").value = "";
+
       renderCategoryTabs();
       renderAdminCatalog();
       updateSelectedCount();

@@ -1,0 +1,23 @@
+{
+  "description": "Wording for the three copy-message buttons in index.html: the per-member '复制付款消息' (payment message), the '📢 复制到货通知' (group arrival announcement, at the top of the page), and the 会员/Members tab's '复制催款消息' (payment reminder, cross-round). Edit THIS file to change how any of the three messages read — do not edit index.html for wording changes. {placeholders} are filled in automatically from real data (product name, quantity, unit, amount, adjustment note, actual weight, total, member names, round label, pickup location) — keep them in the text, just move/reword what's around them. Re-upload this file to the repo root to apply changes; no index.html edit or redeploy of the app itself needed. Payment-message style matches how WG团购群 already writes these by hand: \"@name\", no emoji, amounts prefixed with \"$\" (e.g. \"$16\", \"-$6.5\"), blank line before the item list and before the total, \"一共$X～\". The reminder message (reminderTotalLine/reminderCheckInLine/reminderClosing) shows only the combined total owed, not a per-round breakdown — reminderDateLine is kept below for reference but is no longer used by buildReminderMessage(). IMPORTANT: the field names below (itemLine, weightSuffix, adjNoteSuffix, adjItemLine, adjOtherLine, reminderTotalLine, reminderCheckInLine, reminderClosing, etc.) are exactly what index.html's buildMemberMessage()/buildGroupAnnouncement()/buildReminderMessage() look for — renaming a field or its {placeholder} silently breaks that piece of the message with no error shown anywhere, since fillTemplate() quietly fills an unrecognized placeholder with an empty string rather than failing loudly. If you want to redesign how weight/notes are combined (e.g. one unified parenthetical instead of two separate ones), that needs an index.html code change to match, not just a rename here.",
+  "greeting": "@{name}",
+  "itemLine": "{item}{qtySuffix}  {amount}{weightSuffix}",
+  "weightSuffix": "（{grams}g）",
+  "unverifiedAmount": "待确认",
+  "unverifiedSuffix": "（缺失/待确认）",
+  "adjItemLine": "↳ {item} {qtySign}{qty}{unit}{noteSuffix} {amount}",
+  "adjNoteSuffix": "（{note}）",
+  "adjOtherLine": "↳ {note} {amount}",
+  "adjDefaultNote": "退款/补款",
+  "totalLine": "一共{total}～",
+  "closingPaid": "",
+  "closingUnpaid": "\nPaynow 93395373 /ZHAO JIE， 亲，转账后记得发截图",
+  "reminderDateLine": "{label}团购　{amount}",
+  "reminderTotalLine": "一共{total}，",
+  "reminderCheckInLine": "亲，确认一下付款哈。要是转过了让我知道下～",
+  "reminderClosing": "\nPaynow 93395373 /ZHAO JIE， 亲，转账后记得发截图",
+  "mentionPrefix": "@",
+  "mentionSeparator": " ",
+  "pickupLocation": "107 06-02",
+  "groupAnnouncementText": "团购到了，我们在分装，有空的可以来{location}自取，会比较快。\n需要送货的也可以小群弹一下时间，我们好安排。\n\n*请尽快安排时间取/送，家里冰箱位置有限。"
+}
