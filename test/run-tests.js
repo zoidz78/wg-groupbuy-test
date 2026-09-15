@@ -44,7 +44,7 @@ function extractFunction(name, src) {
 
 const ADMIN_SRC = extractScript(fs.readFileSync(ADMIN_HTML, "utf8"));
 const FN_NAMES = ["productEmoji", "emojiLabel", "memberKeyOf", "groupOrdersByMember", "buildExport", "buildManifest",
-                   "formatQty", "qtyTail", "buildFullJielongRecap"];
+                   "formatQty", "qtyTail", "buildFullJielongRecap", "computeRehydrationFromRound"];
 // buildFullJielongRecap closes over module-level `openRound`/`currentOrders`
 // rather than taking them as params — declare them here so the extracted
 // function body resolves against these instead of throwing ReferenceError.
@@ -375,6 +375,71 @@ check("a product with piecesPerUnit additionally offers pieces", () => {
 check("REAL catalog: asparagus (weight, explicit gramsPerUnit) offers native + grams", () => {
   const opts = unitOptionsFor("asparagus", CATALOG.asparagus);
   assert.deepStrictEqual(opts.map(o => o.value), ["native", "grams"]);
+});
+
+console.log("\n--- computeRehydrationFromRound — BUG-1 regression (updating a round used to wipe it) ---");
+function publishedRoundWithTwoProducts() {
+  return {
+    date: "2026-09-19",
+    products: {
+      beef_jinqian_jian: { label: "小条金钱腱", price: 18, unit: "kg", category: "Meats" },
+      box_item:          { label: "普通盒装商品", price: 5, unit: "盒", category: "Frozen" },
+    },
+  };
+}
+check("exact repro: everything already published survives being rehydrated", () => {
+  // Simulates the reported bug: admin published a round with 2 products,
+  // then reloaded the page (selected/roundPrices would have reset to
+  // empty). Rehydrating from the round must recover BOTH products, not
+  // just let the admin start from a blank slate.
+  const result = computeRehydrationFromRound(publishedRoundWithTwoProducts(), CATALOG, {});
+  assert.deepStrictEqual(result.selectedKeys.sort(), ["beef_jinqian_jian", "box_item"]);
+  assert.strictEqual(result.roundPrices.beef_jinqian_jian, 18);
+  assert.strictEqual(result.roundPrices.box_item, 5);
+});
+check("a round-only custom product (added in an earlier session) is reconstructed, not dropped", () => {
+  const round = {
+    date: "2026-09-19",
+    products: {
+      item_custom_thing: { label: "临时商品", price: 7, unit: "份", category: "Pantry" },
+    },
+  };
+  const result = computeRehydrationFromRound(round, CATALOG, {});
+  assert.ok(result.newCustomProducts.item_custom_thing, "custom product must be reconstructed so allEntries() can find it");
+  assert.strictEqual(result.newCustomProducts.item_custom_thing.label, "临时商品");
+  assert.strictEqual(result.selectedKeys[0], "item_custom_thing");
+});
+check("a gift-target product is restored to roundPrices but NEVER added to selectedKeys", () => {
+  const round = {
+    date: "2026-09-19",
+    products: {
+      mooncake_maoshanwang: { label: "原味猫山王冰皮月饼", price: 30, unit: "盒", category: "Frozen", linkedGift: { key: "gift_insulated_bag", ratio: 1 } },
+      gift_insulated_bag:   { label: "保温袋", price: 0, unit: "个", category: "Gifts" },
+    },
+  };
+  const result = computeRehydrationFromRound(round, CATALOG, {});
+  assert.ok(result.selectedKeys.includes("mooncake_maoshanwang"));
+  assert.ok(!result.selectedKeys.includes("gift_insulated_bag"), "gift is auto-managed, never independently selected");
+});
+check("weighMode/gramsPerUnit/piecesPerUnit survive reconstruction for a round-only custom product", () => {
+  const round = {
+    date: "2026-09-19",
+    products: { item_custom_weighed: { label: "临时称重品", price: 9, unit: "kg", category: "Meats", weighMode: "weight", gramsPerUnit: 500 } },
+  };
+  const result = computeRehydrationFromRound(round, CATALOG, {});
+  assert.strictEqual(result.newCustomProducts.item_custom_weighed.weighMode, "weight");
+  assert.strictEqual(result.newCustomProducts.item_custom_weighed.gramsPerUnit, 500);
+});
+check("no product is reconstructed as custom if it already exists in the catalog", () => {
+  const round = {
+    date: "2026-09-19",
+    products: {
+      beef_jinqian_jian: { label: "小条金钱腱", price: 18, unit: "kg", category: "Meats" },
+      apple_envy:        { label: "Envy苹果(5粒/份)", price: 10.5, unit: "份", category: "Produce" },
+    },
+  };
+  const result = computeRehydrationFromRound(round, CATALOG, {});
+  assert.deepStrictEqual(result.newCustomProducts, {}, "both are real catalog products, neither should be reconstructed as custom");
 });
 
 console.log(`\n${pass} passed, ${fail} failed`);

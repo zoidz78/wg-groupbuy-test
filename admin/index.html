@@ -796,9 +796,93 @@
     let currentOrders = [];        // raw docs from subscribeOrders
     let adminUser = null;
     let unsubscribeOrders = null;
+    let hasRehydratedFromRound = false; // BUG-1 guard — see rehydrateFromRound below
+
+    // ============================================================
+    // BUG-1 fix (logged 2026-09-15, fixed same day): `selected`/
+    // `roundPrices` used to start blank on every page load regardless of
+    // whether a round was already published. Coming back later to add ONE
+    // new product and hitting 上架/更新 would silently REPLACE the whole
+    // round with just that one product — wiping every previously-selected
+    // product, and downstream, blanking any member's order line for
+    // whatever disappeared (renderOrdersTab/buildFullJielongRecap/
+    // buildExport all skip a line whose product no longer exists in
+    // round.products, rather than erroring).
+    //
+    // Fix: as soon as an already-open round is known, treat it as the true
+    // baseline. Pure computation kept separate from the DOM writes below,
+    // same reasoning as computeCustomQty — this determines what a
+    // republish actually contains, so it's directly testable.
+    // ============================================================
+    function computeRehydrationFromRound(round, catalog, customProducts) {
+      // A product that only exists in the round (e.g. a custom item added
+      // via saveNewProduct() in an earlier browser session) needs to be
+      // reconstructed, or allEntries()[key] would come back undefined the
+      // moment publishOrUpdateRound() tries to rebuild it from `selected`.
+      const newCustomProducts = {};
+      for (const [key, p] of Object.entries(round.products)) {
+        if (catalog[key] || customProducts[key]) continue;
+        const entry = { label: p.label, category: p.category, unit: p.unit, active: true };
+        if (p.weighMode) entry.weighMode = p.weighMode;
+        if (p.gramsPerUnit) entry.gramsPerUnit = p.gramsPerUnit;
+        if (p.piecesPerUnit) entry.piecesPerUnit = p.piecesPerUnit;
+        newCustomProducts[key] = entry;
+      }
+
+      // Self-contained gift-target check (mirrors giftTargetKeys()) against
+      // the FULL merged view including the just-reconstructed entries above
+      // — a gift is never independently selected, it's auto-injected at
+      // publish time from its parent's linkedGift field.
+      const merged = { ...catalog, ...customProducts, ...newCustomProducts };
+      const giftKeys = new Set();
+      for (const p of Object.values(merged)) {
+        if (p.linkedGift && p.linkedGift.key) giftKeys.add(p.linkedGift.key);
+      }
+
+      const selectedKeys = [];
+      const roundPrices = {};
+      for (const [key, p] of Object.entries(round.products)) {
+        if (giftKeys.has(key)) continue;
+        selectedKeys.push(key);
+        roundPrices[key] = p.price;
+      }
+      return { selectedKeys, roundPrices, newCustomProducts };
+    }
+
+    // DOM-coupled wrapper. Runs once per page load — does not re-fire on
+    // the admin's OWN later publishes (those already reflect `selected`
+    // correctly, and re-running would fight an in-progress, not-yet-
+    // published checkbox change with stale data).
+    function rehydrateFromRound(round) {
+      if (hasRehydratedFromRound || !round || !round.products) return;
+      hasRehydratedFromRound = true;
+
+      // Also restores the date/label fields — without this, "updating" an
+      // open round would publish under TODAY's date instead of the round's
+      // actual date, silently creating a second, orphaned round with the
+      // identical symptom this whole fix is for.
+      document.getElementById("round-date-input").value = round.date;
+      document.getElementById("round-label-input").value = round.label || labelFromDate(round.date);
+      document.getElementById("items-label-input").value = round.itemsLabel || "";
+      labelManuallyEdited = true; // now reflects a real round, not a should-follow-today's-date default
+
+      const result = computeRehydrationFromRound(round, catalog, customProducts);
+      Object.assign(customProducts, result.newCustomProducts);
+      result.selectedKeys.forEach(k => selected.add(k));
+      Object.assign(roundPrices, result.roundPrices);
+    }
 
     function startNewRoundFlow() {
       document.getElementById("init-modal").classList.add("hidden");
+      // Explicit fresh start overrides any later rehydration from a round
+      // that might already be open — "发起新一期" is a deliberate choice to
+      // begin blank (use 一键沿用上期 for continuity instead).
+      selected = new Set();
+      roundPrices = {};
+      hasRehydratedFromRound = true;
+      renderCategoryTabs();
+      renderAdminCatalog();
+      updateSelectedCount();
     }
     window.startNewRoundFlow = startNewRoundFlow;
 
@@ -1372,6 +1456,10 @@
 
     store.subscribeRound(null, round => {
       openRound = round;
+      rehydrateFromRound(round); // BUG-1 fix — must run before re-rendering the catalog below
+      renderCategoryTabs();
+      renderAdminCatalog();
+      updateSelectedCount();
       updateHeaderStatus();
       if (round && round.status === "open") ensureOrdersSubscription();
     }, err => console.error("加载团购信息出错：", err));
