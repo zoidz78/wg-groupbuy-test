@@ -1320,7 +1320,9 @@
           if (!info) continue;
           const unit = info.unit || "盒";
           let line = `${emojiLabel(info)} $${Number(info.price).toFixed(2)}/${unit}`;
-          if (info.weighMode === "weight") line += "，称重";
+          // 称重 intentionally omitted — kept in sync with index.html's
+          // buildJielongText() so this recap looks identical to what
+          // members already recognize from their own clipboard copy.
           line += ` ${qtyTail(info, qty)}`;
           lines.push(line);
         }

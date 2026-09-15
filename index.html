@@ -411,6 +411,95 @@
     }
     window.setActiveCategory = setActiveCategory;
 
+    // ============================================================
+    // Custom-quantity entry — same conventions dashboard.html already uses
+    // for its post-order weight/piece-count correction editors, exposed
+    // here at ORDER time instead. Kept as a secondary path alongside the
+    // +/- stepper (not a replacement) so the common whole-unit case stays a
+    // single tap.
+    // ============================================================
+
+    // Ported verbatim from dashboard.html's gramsPerUnit(key) (D4) — explicit
+    // field first, then unit==="kg" convention, then parsed off the label's
+    // own "(700g/份)"-style parenthetical. Operates on a product object
+    // directly rather than a DATA.products lookup, since the cart's round
+    // data isn't keyed the same way as the dashboard's.
+    function gramsPerUnitFor(p) {
+      if (p.gramsPerUnit != null) return p.gramsPerUnit;
+      if (p.unit === "kg") return 1000;
+      if (!p.label) return null;
+      const m = p.label.match(/\((\d+(?:\.\d+)?)\s*(kg|g)\s*\/[^)]*\)/i);
+      if (!m) return null;
+      const value = parseFloat(m[1]);
+      if (isNaN(value) || value <= 0) return null;
+      return m[2].toLowerCase() === "kg" ? value * 1000 : value;
+    }
+
+    // Same buyer-favor rounding as dashboard.html's roundGramsDown — a
+    // member's stated weight is an estimate, so any rounding tips their way.
+    function roundGramsDown(grams) {
+      return Math.floor(grams / 10) * 10;
+    }
+
+    // Which alternate units this product's custom-quantity row should
+    // offer, beyond its own native unit (always available). Driven purely
+    // by explicit catalog fields, same rule dashboard.html follows for
+    // which correction editor a product gets — never guessed from the label.
+    function unitOptionsFor(key, p) {
+      const options = [{ value: "native", label: p.unit || "份" }];
+      if (gramsPerUnitFor(p) != null) options.push({ value: "grams", label: "克(g)" });
+      if (p.piecesPerUnit != null) options.push({ value: "pieces", label: "颗" });
+      return options;
+    }
+
+    let expandedCustomQty = null; // product key with its custom-entry row open, or null
+
+    function toggleCustomQty(key) {
+      expandedCustomQty = expandedCustomQty === key ? null : key;
+      renderProductList();
+    }
+    window.toggleCustomQty = toggleCustomQty;
+
+    // Pure conversion math, kept separate from the DOM-reading caller below
+    // so it's directly testable — this is the part that determines what a
+    // member actually gets billed, same reasoning as keeping buildExport/
+    // buildManifest pure. Returns { qty } on success or { error } to show.
+    function computeCustomQty(p, raw, unitChoice) {
+      if (isNaN(raw) || raw <= 0) return { error: "请输入大于 0 的数量" };
+
+      if (unitChoice === "grams") {
+        const gpu = gramsPerUnitFor(p);
+        if (gpu == null) return { error: "此商品无法按克数换算" };
+        return { qty: roundGramsDown(raw) / gpu };
+      }
+      if (unitChoice === "pieces") {
+        if (p.piecesPerUnit == null) return { error: "此商品未设置颗数换算" };
+        if (raw > p.piecesPerUnit) return { error: `最多 ${p.piecesPerUnit} 颗/${p.unit || "份"}` };
+        return { qty: raw / p.piecesPerUnit };
+      }
+      if (p.weighMode === "proportional" && raw > 1) {
+        return { error: "分箱商品单次最多订购 1 整份（一箱）" };
+      }
+      return { qty: raw };
+    }
+
+    function applyCustomQty(key) {
+      const p = currentRound.products[key];
+      const raw = parseFloat(document.getElementById(`custom-qty-value-${key}`).value);
+      const unitChoice = document.getElementById(`custom-qty-unit-${key}`).value;
+
+      const result = computeCustomQty(p, raw, unitChoice);
+      if (result.error) { alert(result.error); return; }
+
+      const qty = Math.round(result.qty * 1000) / 1000; // trim float artifacts without losing real precision
+      if (qty <= 0) delete cart[key]; else cart[key] = qty;
+      syncLinkedGifts();
+      expandedCustomQty = null;
+      renderProductList();
+      renderCartBar();
+    }
+    window.applyCustomQty = applyCustomQty;
+
     function renderProductList() {
       const container = document.getElementById("product-list");
       if (!currentRound) { container.innerHTML = ""; return; }
@@ -422,29 +511,45 @@
       container.innerHTML = entries.map(([key, p]) => {
         const qty = cart[key] || 0;
         const unit = p.unit || "盒";
-        const badge = p.weighMode === "weight" ? '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-normal">称重</span>'
-                    : p.weighMode === "proportional" ? '<span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-normal">分箱</span>'
-                    : "";
+        // 称重 is intentionally NOT shown to members (house decision) — the
+        // custom-quantity unit list still offers 克(g) entry regardless of
+        // whether this badge is visible. 分箱 stays, since a bunch/box-share
+        // item's fractional nature is worth surfacing on the card itself.
+        const badge = p.weighMode === "proportional" ? '<span class="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-normal">分箱</span>' : "";
         const giftNote = p.linkedGift && currentRound.products[p.linkedGift.key]
           ? `<div class="text-[10px] text-amber-600 mt-0.5">🎁 每${p.linkedGift.ratio && p.linkedGift.ratio !== 1 ? p.linkedGift.ratio : ""}份加送 ${currentRound.products[p.linkedGift.key].label}</div>`
           : "";
+        const isExpanded = expandedCustomQty === key;
+        const customRow = isExpanded ? `
+          <div class="mt-2 pt-2 border-t border-slate-100 flex items-center gap-1.5">
+            <input type="number" step="any" min="0" id="custom-qty-value-${key}" placeholder="数量" class="w-16 px-1.5 py-1 border border-slate-300 rounded text-xs">
+            <select id="custom-qty-unit-${key}" class="px-1.5 py-1 border border-slate-300 rounded text-xs bg-white">
+              ${unitOptionsFor(key, p).map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+            </select>
+            <button onclick="applyCustomQty('${key}')" class="bg-emerald-600 text-white text-xs px-2.5 py-1 rounded font-semibold">确定</button>
+          </div>
+        ` : "";
         return `
-          <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-            <div class="pr-2">
-              <div class="flex items-center gap-1.5 font-medium text-slate-800 text-sm">
-                <span>${emojiLabel(p)}</span>
-                ${badge}
+          <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between">
+              <div class="pr-2">
+                <div class="flex items-center gap-1.5 font-medium text-slate-800 text-sm">
+                  <span>${emojiLabel(p)}</span>
+                  ${badge}
+                </div>
+                <div class="text-emerald-600 font-bold text-sm mt-1">$${Number(p.price).toFixed(2)} <span class="text-xs text-slate-400 font-normal">/${unit}</span></div>
+                ${giftNote}
               </div>
-              <div class="text-emerald-600 font-bold text-sm mt-1">$${Number(p.price).toFixed(2)} <span class="text-xs text-slate-400 font-normal">/${unit}</span></div>
-              ${giftNote}
+              <div class="flex items-center gap-2">
+                ${qty > 0 ? `
+                  <button onclick="updateQty('${key}', -1)" class="w-7 h-7 bg-slate-100 text-slate-600 rounded-full font-bold flex items-center justify-center text-base hover:bg-slate-200">-</button>
+                  <span class="text-sm font-semibold w-5 text-center">${qty}</span>
+                ` : ""}
+                <button onclick="updateQty('${key}', 1)" class="w-7 h-7 bg-emerald-600 text-white rounded-full font-bold flex items-center justify-center text-base hover:bg-emerald-700">+</button>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              ${qty > 0 ? `
-                <button onclick="updateQty('${key}', -1)" class="w-7 h-7 bg-slate-100 text-slate-600 rounded-full font-bold flex items-center justify-center text-base hover:bg-slate-200">-</button>
-                <span class="text-sm font-semibold w-5 text-center">${qty}</span>
-              ` : ""}
-              <button onclick="updateQty('${key}', 1)" class="w-7 h-7 bg-emerald-600 text-white rounded-full font-bold flex items-center justify-center text-base hover:bg-emerald-700">+</button>
-            </div>
+            <button onclick="toggleCustomQty('${key}')" class="text-[10px] text-slate-400 underline mt-1">${isExpanded ? "收起" : "自定义数量"}</button>
+            ${customRow}
           </div>
         `;
       }).join("");
@@ -540,10 +645,9 @@
         if (!p) continue;
         const unit = p.unit || "盒";
         let line = `${emojiLabel(p)} $${Number(p.price).toFixed(2)}/${unit}`;
-        // Tightened from `if (p.weighMode)` — that also matched
-        // "proportional" (box-share) items and mislabeled them as 称重,
-        // which the admin catalog itself treats as a distinct 分箱 badge.
-        if (p.weighMode === "weight") line += "，称重";
+        // 称重 intentionally omitted from anything client-facing (house
+        // decision) — the quantity/unit tail below still carries the real
+        // number (e.g. "0.7kg"), which is what members actually need to see.
         line += ` ${qtyTail(p, qty)}`;
         lines.push(line);
       }
